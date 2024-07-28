@@ -1,6 +1,6 @@
 <template>
   <!-- Brokers, Broker Status, Total Funds, Utilized Margin & Today's Date -->
-  <section class="row pb-3">
+  <section class="row pb-3" :style="{ zoom: '0.9' }">
     <div class="col-12">
 
       <div class="row">
@@ -77,7 +77,7 @@
     </div>
   </section>
 
-  <!-- <section class="row py-3">
+  <!-- <section class="row py-3" :style="{ zoom: '0.9' }">
     <div class="col-12">
       <div class="form-check">
         <input class="form-check-input" type="checkbox" id="toggleLineChart" v-model="showLineChart">
@@ -90,7 +90,7 @@
   </section> -->
 
   <!-- Total Profit & Net PNL -->
-  <section class="row py-3">
+  <section class="row py-3" :style="{ zoom: '0.9' }">
     <div class="col-5">
       <div class="Card">
         <blockquote class="fs-3"
@@ -132,7 +132,7 @@
     </div>
   </section>
 
-  <section class="row py-1">
+  <section class="row py-1" :style="{ zoom: '0.9' }">
     <div class="col-12" v-if="killSwitchActive">
       <div class="bg-danger text-white p-3 rounded-3 shadow">
         <div class="d-flex align-items-center justify-content-between">
@@ -155,7 +155,7 @@
   <hr />
 
   <!-- Place Order Form -->
-  <section class="row py-2">
+  <section class="row py-2" :style="{ zoom: '0.9' }">
     <form @submit.prevent>
       <fieldset :disabled="isFormDisabled" :class="{ 'disabled-form': isFormDisabled }">
         <div class="row">
@@ -480,7 +480,7 @@
   </section>
 
   <!-- Positions & Trades -->
-  <section class="row py-3">
+  <section class="row py-3" :style="{ zoom: '0.9' }">
     <div class="col-12">
       <ul class="nav nav-tabs" id="myTab" role="tablist">
         <li class="nav-item" role="presentation">
