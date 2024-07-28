@@ -501,6 +501,11 @@
             🤖 Automations
           </button>
         </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="refresh-tab" type="button" @click="refreshData">
+            🔄 Refresh
+          </button>
+        </li>	  
       </ul>
       <div class="tab-content" id="myTabContent">
         <div class="tab-pane fade show active" id="positions-tab-pane" role="tabpanel" aria-labelledby="positions-tab"
@@ -2056,6 +2061,27 @@ const maskBrokerClientId = (clientId) => {
   return `${firstPart}${middleMask}${lastPart}`;
 };
 
+// Refresh selected tab...
+const refreshData = async () => {
+  if (activeTab.value === 'trades') {
+    if (selectedBroker.value?.brokerName === 'Dhan') {
+      await fetchDhanOrdersTradesBook();
+    } else if (selectedBroker.value?.brokerName === 'Flattrade') {
+      await fetchFlattradeOrdersTradesBook();
+    } else if (selectedBroker.value?.brokerName === 'Shoonya') {
+      await fetchShoonyaOrdersTradesBook();
+    }
+  } else if (activeTab.value === 'positions') {
+    if (selectedBroker.value?.brokerName === 'Dhan') {
+      await fetchDhanPositions();
+    } else if (selectedBroker.value?.brokerName === 'Flattrade') {
+      await fetchFlattradePositions();
+    } else if (selectedBroker.value?.brokerName === 'Shoonya') {
+      await fetchShoonyaPositions();
+    }
+  }
+  await updateFundLimits();
+};
 
 // Update the quantities object
 const quantities = ref({
