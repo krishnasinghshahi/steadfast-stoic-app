@@ -535,6 +535,7 @@
             <thead>
               <tr>
                 <th scope="col">Symbol Name</th>
+                <th scope="col">Exchange</th>
                 <th scope="col">Position Type</th>
                 <th scope="col">Product Type</th>
                 <th scope="col">Net Qty</th>
@@ -547,6 +548,7 @@
             <tbody>
               <tr v-for="dhanPosition in positionsWithCalculatedProfit" :key="dhanPosition.securityId">
                 <td>{{ dhanPosition.tradingSymbol }}</td>
+                <td>{{ dhanPosition.exchangeSegment }}</td>
                 <td>{{ dhanPosition.positionType }}</td>
                 <td>{{ dhanPosition.productType }}</td>
                 <td
@@ -576,6 +578,7 @@
               <thead>
                 <tr>
                   <th scope="col">Symbol Details</th>
+                  <th scope="col">Exchange</th>
                   <th scope="col">Net Avg</th>
                   <th scope="col">LTP</th>
                   <th scope="col" class="text-center">Stoploss</th>
@@ -615,6 +618,7 @@
 
                       </div>
                     </td>
+                    <td>{{ flattradePosition.exch }}</td>
                     <td>{{ flattradePosition.netavgprc }}</td>
                     <td>{{ positionLTPs[flattradePosition.tsym] || '-' }}</td>
                     <td>
@@ -690,6 +694,7 @@
               <thead>
                 <tr>
                   <th scope="col">Symbol Details</th>
+                  <th scope="col">Exchange</th>
                   <th scope="col">Net Avg</th>
                   <th scope="col">LTP</th>
                   <th scope="col" class="text-center">Stoploss</th>
@@ -726,6 +731,7 @@
                         </div>
                       </div>
                     </td>
+                    <td>{{ shoonyaPosition.exchange }}</td>
                     <td>{{ shoonyaPosition.netavgprc }}</td>
                     <td>{{ positionLTPs[shoonyaPosition.tsym] || '-' }}</td>
                     <td>
@@ -3043,43 +3049,244 @@ const deployedCapitalPercentage = computed(() => {
   return totalUsedAmount ? (totalProfit.value / totalUsedAmount) * 100 : 0;
 });
 
+// Position total Buy Sell Value computaton according to exchange
+const totalNfoDayBuyValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'NFO')
+      .reduce((total, position) => total + (parseFloat(position.daybuyamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'NSE_FNO')
+      .reduce((total, position) => total + (parseFloat(position.dayBuyValue) || 0), 0);
+  }
+  return 0;
+});
+
+const totalBfoDayBuyValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'BFO')
+      .reduce((total, position) => total + (parseFloat(position.daybuyamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'BSE_FNO')
+      .reduce((total, position) => total + (parseFloat(position.dayBuyValue) || 0), 0);
+  }
+  return 0;
+});
+
+const totalBfoDaySellValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'BFO')
+      .reduce((total, position) => total + (parseFloat(position.daysellamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'BSE_FNO')
+      .reduce((total, position) => total + (parseFloat(position.daySellValue) || 0), 0);
+  }
+  return 0;
+});
+
+const totalNfoDaySellValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'NFO')
+      .reduce((total, position) => total + (parseFloat(position.daysellamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'NSE_FNO')
+      .reduce((total, position) => total + (parseFloat(position.daySellValue) || 0), 0);
+  }
+  return 0;
+});
+
+const totalMcxCommDaySellValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'MCX')
+      .reduce((total, position) => total + (parseFloat(position.daysellamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'MCX_COMM')
+      .reduce((total, position) => total + (parseFloat(position.daySellValue) || 0), 0);
+  }
+  return 0;
+});
+
+const totalMcxCommDayBuyValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'MCX')
+      .reduce((total, position) => total + (parseFloat(position.daybuyamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'MCX_COMM')
+      .reduce((total, position) => total + (parseFloat(position.dayBuyValue) || 0), 0);
+  }
+  return 0;
+});
+
+const totalNseEqDaySellValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'NSE')
+      .reduce((total, position) => total + (parseFloat(position.daysellamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'NSE_EQ')
+      .reduce((total, position) => total + (parseFloat(position.daySellValue) || 0), 0);
+  }
+  return 0;
+});
+
+const totalNseEqDayBuyValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'NSE')
+      .reduce((total, position) => total + (parseFloat(position.daybuyamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'NSE_EQ')
+      .reduce((total, position) => total + (parseFloat(position.dayBuyValue) || 0), 0);
+  }
+  return 0;
+});
+
+const totalBseEqDaySellValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'BSE')
+      .reduce((total, position) => total + (parseFloat(position.daysellamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'BSE_EQ')
+      .reduce((total, position) => total + (parseFloat(position.daySellValue) || 0), 0);
+  }
+  return 0;
+});
+
+const totalBseEqDayBuyValue = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return flatTradePositionBook.value
+      .filter(position => position.exch === 'BSE')
+      .reduce((total, position) => total + (parseFloat(position.daybuyamt) || 0), 0);
+  }
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return dhanPositionBook.value
+      .filter(position => position.exchangeSegment === 'BSE_EQ')
+      .reduce((total, position) => total + (parseFloat(position.dayBuyValue) || 0), 0);
+  }
+  return 0;
+});
+
 const totalBrokerage = computed(() => {
   let total = 0;
 
-  // Calculate totalValue based on totalBuyValue and totalSellValue
-  const totalValue = totalBuyValue.value + totalSellValue.value;
+  // Calculate total values
+  const totalNfoDayValue = totalNfoDayBuyValue.value + totalNfoDaySellValue.value;
+  const totalBfoDayValue = totalBfoDayBuyValue.value + totalBfoDaySellValue.value;
+  const totalNseEqDayValue = totalNseEqDayBuyValue.value + totalNseEqDaySellValue.value;
+  const totalBseEqDayValue = totalBseEqDayBuyValue.value + totalBseEqDaySellValue.value;
+  const totalMcxCommDayValue = totalMcxCommDayBuyValue.value + totalMcxCommDaySellValue.value;
+  const totalEqDerivativeValue = totalNfoDayValue + totalBfoDayValue;
+  const totalEqDerivativeBuyValue = totalNfoDayBuyValue.value + totalBfoDayBuyValue.value;
+  const totalEqDerivativeSellValue = totalNfoDaySellValue.value + totalBfoDaySellValue.value;
+  const totalEquityDayBuyValue = totalNseEqDayBuyValue.value + totalBseEqDayBuyValue.value;
+  const totalEquityDaySellValue = totalNseEqDaySellValue.value + totalBseEqDaySellValue.value;
+  const totalEquityDayValue = totalNseEqDayValue.value + totalBseEqDayValue.value;
 
   if (selectedBroker.value?.brokerName === 'Dhan') {
-    // Calculate charges for Dhan broker
-    const exchangeCharge = Math.round(totalValue * 0.0005 * 100) / 100;
-    const sebiCharge = Math.round(totalValue * 0.000001 * 100) / 100;
-    const gstCharge = Math.round((exchangeCharge + sebiCharge) * 18) / 100;
-    const stampdutyCharge = Math.round(totalBuyValue.value * 0.0003);
-    const sttCharge = Math.round(totalSellValue.value * 0.000625 * 100) / 100;
+    // Dhan Brokerage Calculations
+    const totalNseEqBrokerage = trades.value
+      .filter(trade => trade.exchangeSegment === 'NSE')
+      .reduce((total, trade) => {
+        const tradeValue = parseFloat(trade.tradedQuantity * trade.tradedPrice) || 0;
+        const brokerage = tradeValue < 66666.67 ? tradeValue * 0.0003 : 20;
+        return total + brokerage;
+      }, 0);
 
-    // Accumulate brokerage for Dhan
+    const totalBseEqBrokerage = trades.value
+      .filter(trade => trade.exchangeSegment === 'BSE')
+      .reduce((total, trade) => {
+        const tradeValue = parseFloat(trade.tradedQuantity * trade.tradedPrice) || 0;
+        const brokerage = tradeValue < 66666.67 ? tradeValue * 0.0003 : 20;
+        return total + brokerage;
+      }, 0);
+
+    // Charges for Dhan
+    const nfoExchangeCharge = Math.round(totalNfoDayValue * 0.0005 * 100) / 100;
+    const bfoExchangeCharge = Math.round(totalBfoDayValue * 0.000495 * 100) / 100;
+    const equityDerivativeSebiCharge = Math.round(totalEqDerivativeValue * 0.000001 * 100) / 100;
+    const equityDerivativeGstCharge = Math.round((nfoExchangeCharge + bfoExchangeCharge + equityDerivativeSebiCharge) * 0.18 * 100) / 100;
+    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003);
+    const equityDerivativeSttCharge = Math.round(totalEqDerivativeSellValue * 0.000625 * 100) / 100;
+
+    const nseEqExchangeCharge = Math.round(totalNseEqDayValue * 0.0000332 * 100) / 100;
+    const bseEqExchangeCharge = Math.round(totalBseEqDayValue * 0.0000375 * 100) / 100;
+    const equitySebiCharge = Math.round(totalEquityDayValue * 0.000001 * 100) / 100;
+    const equityGstCharge = Math.round((nseEqExchangeCharge + bseEqExchangeCharge + equitySebiCharge) * 0.18 * 100) / 100;
+    const equityStampdutyCharge = Math.round(totalEquityDayBuyValue * 0.00003);
+    const equitySttCharge = Math.round(totalEquityDaySellValue * 0.00025 * 100) / 100;
+
+    const mcxCommExchangeCharge = Math.round(totalMcxCommDayValue * 0.0005 * 100) / 100;
+    const mcxCommSebiCharge = Math.round(totalMcxCommDayValue * 0.000001 * 100) / 100;
+    const mcxCommGstCharge = Math.round((mcxCommExchangeCharge + equitySebiCharge) * 0.18 * 100) / 100;
+    const mcxCommStampdutyCharge = Math.round(totalMcxCommDayBuyValue * 0.00003 *100) / 100;
+    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005);
+
+    // Brokerage for traded orders
     for (const order of dhanOrders.value) {
-      if (order.orderStatus === 'TRADED') {
-        total += 23.6; // Accumulate brokerage total
+      if (order.orderStatus === 'TRADED' && ['NSE_NFO', 'BSE_BFO', 'MCX_COMM'].includes(order.exchangeSegment)) {
+        total += 23.6;
       }
     }
 
-    // Add charges to total for Dhan
-    total += (exchangeCharge + sebiCharge + gstCharge + stampdutyCharge + sttCharge);
+    // Add all charges to total for Dhan
+    total += (nfoExchangeCharge + bfoExchangeCharge + equityDerivativeSebiCharge + equityDerivativeGstCharge + equityDerivativeStampdutyCharge + equityDerivativeSttCharge +
+             nseEqExchangeCharge + bseEqExchangeCharge + equitySebiCharge + equityGstCharge + equityStampdutyCharge + equitySttCharge +
+             mcxCommExchangeCharge + mcxCommSebiCharge + mcxCommGstCharge + mcxCommStampdutyCharge + mcxCommCttCharge +
+             totalNseEqBrokerage + totalBseEqBrokerage);
 
   } else if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
-    // Calculate charges for Flattrade and Shoonya (they have the same structure)
-    const exchangeCharge = Math.round(totalValue * 0.000495 * 100) / 100;
-    const ipftCharge = Math.round(totalValue * 0.000005 * 100) / 100;
-    const sebiCharge = Math.round(totalValue * 0.000001 * 100) / 100;
-    const gstCharge = Math.round((exchangeCharge + sebiCharge + ipftCharge) * 18) / 100;
-    const stampdutyCharge = Math.round(totalBuyValue.value * 0.00003);
-    const sttCharge = Math.round(totalSellValue.value * 0.000625);
+    // Flattrade and Shoonya Brokerage Calculations
+    const nfoExchangeCharge = Math.round(totalNfoDayValue * 0.000495 * 100) / 100;
+    const nfoIpftCharge = Math.round(totalNfoDayValue * 0.000005 * 100) / 100;
+    const bfoExchangeCharge = Math.round(totalBfoDayValue * 0.000495 * 100) / 100;
+    const equityDerivativeSebiCharge = Math.round(totalEqDerivativeValue * 0.000001 * 100) / 100;
+    const equityDerivativeGstCharge = Math.round((nfoExchangeCharge + bfoExchangeCharge + equityDerivativeSebiCharge) * 0.18 * 100) / 100;
+    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003);
+    const equityDerivativeSttCharge = Math.round(totalEqDerivativeSellValue * 0.000625 * 100) / 100;
+
+    const nseEqExchangeCharge = Math.round(totalNseEqDayValue * 0.0000322 * 100) / 100;
+    const nseEqIpftCharge = Math.round(totalNfoDayValue * 0.000001 * 100) / 100;
+    const bseEqExchangeCharge = Math.round(totalBseEqDayValue * 0.0000375 * 100) / 100;
+    const equitySebiCharge = Math.round(totalEquityDayValue * 0.000001 * 100) / 100;
+    const equityGstCharge = Math.round((nseEqExchangeCharge + bseEqExchangeCharge + equitySebiCharge) * 0.18 * 100) / 100;
+    const equityStampdutyCharge = Math.round(totalEquityDayBuyValue * 0.00003);
+    const equitySttCharge = Math.round(totalEquityDaySellValue * 0.00025);
+
+    const mcxCommExchangeCharge = Math.round(totalMcxCommDayValue * 0.0005 * 100) / 100;
+    const mcxCommSebiCharge = Math.round(totalMcxCommDayValue * 0.000001 * 100) / 100;
+    const mcxCommGstCharge = Math.round((mcxCommExchangeCharge + equitySebiCharge) * 0.18 * 100) / 100;
+    const mcxCommStampdutyCharge = Math.round(totalMcxCommDayBuyValue * 0.00003);
+    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005);
 
     // Add charges to total for Flattrade and Shoonya
-    total += (exchangeCharge + ipftCharge + sebiCharge + gstCharge + stampdutyCharge + sttCharge);
+    total += (nfoExchangeCharge + nfoIpftCharge + bfoExchangeCharge + equityDerivativeSebiCharge + equityDerivativeGstCharge + equityDerivativeStampdutyCharge + equityDerivativeSttCharge +
+             nseEqExchangeCharge + nseEqIpftCharge + bseEqExchangeCharge + equitySebiCharge + equityGstCharge + equityStampdutyCharge + equitySttCharge +
+             mcxCommExchangeCharge + mcxCommSebiCharge + mcxCommGstCharge + mcxCommStampdutyCharge + mcxCommCttCharge);
 
-    // No additional brokerage for Flattrade and Shoonya
   }
 
   return total;
