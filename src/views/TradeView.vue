@@ -2145,7 +2145,7 @@ const stopLossLimitPrice = ref(null);
 const triggerPrice = ref(null);
 const modalTransactionType = ref('');
 const modalOptionType = ref('');
-// Get Exchange Segment for Dhan or Flattrade
+// Get Exchange Segment for Dhan or Flattrade or Shoonya
 const getExchangeSegment = () => {
   if (!selectedBroker.value || !selectedExchange.value) {
     throw new Error("Broker or exchange not selected");
@@ -2153,26 +2153,26 @@ const getExchangeSegment = () => {
 
   if (selectedBroker.value?.brokerName === 'Dhan') {
     if (selectedExchange.value === 'NSE') {
-      return 'NSE_FNO';
+      return { segment: 'NSE_FNO', dhanExchangeSegment: "0" };
     } else if (selectedExchange.value === 'BSE') {
-      return 'BSE_FNO';
+      return { segment: 'BSE_FNO', dhanExchangeSegment: "1" };
     } else {
       throw new Error("Selected exchange is not valid for Dhan");
     }
   } else if (selectedBroker.value?.brokerName === 'Flattrade') {
     if (selectedExchange.value === 'NFO') {
-      return 'NFO';
+      return { segment: 'NFO' };
     } else if (selectedExchange.value === 'BFO') {
-      return 'BFO';
+      return { segment: 'BFO' };
     } else {
       throw new Error("Selected exchange is not valid for Flattrade");
     }
   }
   else if (selectedBroker.value?.brokerName === 'Shoonya') {
     if (selectedExchange.value === 'NFO') {
-      return 'NFO';
+      return { segment: 'NFO' };
     } else if (selectedExchange.value === 'BFO') {
-      return 'BFO';
+      return { segment: 'BFO' };
     } else {
       throw new Error("Selected exchange is not valid for Shoonya");
     }
@@ -3210,6 +3210,8 @@ const setShoonyaCredentials = async () => {
     showToast.value = true;
   }
 };
+
+// Update the setDhanCredentials function
 const setDhanCredentials = async () => {
   try {
     if (!selectedBroker.value || selectedBroker.value?.brokerName !== 'Dhan') {
@@ -3236,11 +3238,13 @@ const setDhanCredentials = async () => {
       return;
     }
 
+    const { dhanExchangeSegment } = getExchangeSegment();
+
     const response = await axios.post('http://localhost:3000/api/set-dhan-credentials', {
-      usersession: apiToken,
-      userid: clientId,
-      defaultCallSecurityId: defaultCallSecurityId.value,
-      defaultPutSecurityId: defaultPutSecurityId.value
+      accessToken: apiToken,
+      clientId: clientId,
+      dhanExchangeSegment: dhanExchangeSegment,
+      dhanSecurityId: "25"  // You might want to update this based on your requirements
     });
     console.log('Credentials and security IDs set successfully:', response.data);
     toastMessage.value = 'Dhan credentials set successfully';
