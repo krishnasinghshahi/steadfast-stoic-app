@@ -260,19 +260,26 @@
             </div>
           </div>
           <!-- Market Protection Order %-->
-          <!-- <div class="col-3">
-            <label for="MarketProtection" class="form-label mb-0">Market Protection Order %</label>
-            <select id="MarketProtection" class="form-select" aria-label="Market Protection Order %"
-              :class="{ 'disabled-form': isFormDisabled }">
+          <div class="col-2">
+            <label for="MarketProtection" class="form-label mb-0">Market Protection</label>
+            <select id="MarketProtection" class="form-select" 
+              v-model="marketProtectionPercentage"
+              :disabled="isMarketProtectionDisabled || !isMarketAsLimitOrder">
+              <option value="0">0%</option>
               <option value="1">1%</option>
               <option value="2">2%</option>
               <option value="3">3%</option>
               <option value="4">4%</option>
               <option value="5">5%</option>
+              <option value="6">6%</option>
+              <option value="7">7%</option>
+              <option value="8">8%</option>
+              <option value="9">9%</option>
+              <option value="10">10%</option>
             </select>
-          </div> -->
-          <!-- Stoploss -->
-          <div class="col-3">
+          </div> 
+         <!-- Stoploss -->
+          <div class="col-2">
             <label for="enableStoploss" class="form-label mb-0">Stoploss</label>
             <div class="input-group mb-3">
               <div class="input-group-text">
@@ -286,7 +293,7 @@
             </div>
           </div>
           <!-- Target -->
-          <div class="col-3">
+          <div class="col-2">
             <label for="enableTarget" class="form-label mb-0">Target</label>
             <div class="input-group mb-3">
               <div class="input-group-text">
@@ -2058,11 +2065,11 @@ const availableQuantities = ref([]);
 
 const orderTypes = computed(() => {
   if (selectedBroker.value?.brokerName === 'Dhan') {
-    return ['MARKET', 'LIMIT', 'STOP_LOSS'];
+    return ['MARKET', 'LIMIT', 'STOP_LOSS','MARKET AS LIMIT'];
   } else if (selectedBroker.value?.brokerName === 'Flattrade') {
-    return ['MKT', 'LMT','SL-LMT'];
+    return ['MKT', 'LMT','SL-LMT','MARKET AS LIMIT'];
   } else if (selectedBroker.value?.brokerName === 'Shoonya') {
-    return ['MKT', 'LMT','SL-LMT'];
+    return ['MKT', 'LMT','SL-LMT','MARKET AS LIMIT'];
   }
   return [];
 });
@@ -2129,11 +2136,25 @@ const getTransactionType = (type) => {
   return type;
 };
 
+const marketProtectionPercentage = ref(0);
 const limitPrice = ref(null);
 const stopLossLimitPrice = ref(null);
 const triggerPrice = ref(null);
 const modalTransactionType = ref('');
 const modalOptionType = ref('');
+const isMarketOrder = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return selectedOrderType.value === 'MARKET';
+  } else if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    return selectedOrderType.value === 'MKT';
+  }
+  return false;
+});
+const isMarketAsLimitOrder = computed(() => {
+  return selectedOrderType.value === 'MARKET AS LIMIT';
+});
+
+
 // Get Exchange Segment for Dhan or Flattrade
 const getExchangeSegment = () => {
   if (!selectedBroker.value || !selectedExchange.value) {
@@ -2171,8 +2192,38 @@ const getExchangeSegment = () => {
   }
 };
 
+const calculateProtectedPrice = (currentLTP, transactionType, protectionPercentage) => {
+  const protectionFactor = 1 + (protectionPercentage / 100);
+  if (transactionType === 'BUY' || transactionType === 'B') {
+    return currentLTP * protectionFactor;
+  } else {
+    return currentLTP / protectionFactor;
+  }
+};
+
+const roundToNearestTick = (price, tickSize) => {
+  return Math.round(price / tickSize) * tickSize;
+};
+
 // Prepare Order Payload for Dhan or Flattrade
 const prepareOrderPayload = (transactionType, drvOptionType, selectedStrike, exchangeSegment) => {
+  const currentLTP = drvOptionType === 'CALL' ? latestCallLTP.value : latestPutLTP.value;
+  const isMarketProtection = isMarketAsLimitOrder.value;
+  let protectedPrice;
+
+  if (isMarketProtection) {
+    if (marketProtectionPercentage.value > 0) {
+      protectedPrice = calculateProtectedPrice(currentLTP, transactionType, marketProtectionPercentage.value);
+    } else {
+      const defaultOffset = 0.0;
+      protectedPrice = transactionType === 'BUY' ? currentLTP * (1 + defaultOffset) : currentLTP * (1 - defaultOffset);
+    }
+  } else {
+    protectedPrice = currentLTP;
+  }
+
+  protectedPrice = roundToNearestTick(protectedPrice, 0.05);
+
   if (selectedBroker.value?.brokerName === 'Dhan') {
     return {
       brokerClientId: selectedBroker.value.brokerClientId,
@@ -2184,38 +2235,27 @@ const prepareOrderPayload = (transactionType, drvOptionType, selectedStrike, exc
       tradingSymbol: selectedStrike.tradingSymbol,
       securityId: selectedStrike.securityId,
       quantity: selectedQuantity.value,
-      price: selectedOrderType.value === 'STOP_LOSS'? stopLossLimitPrice.value : selectedOrderType.value === 'LIMIT'? limitPrice.value : 0,
-      triggerPrice: selectedOrderType.value === 'STOP_LOSS'? triggerPrice.value : 0,
+      price: selectedOrderType.value === 'STOP_LOSS' ? stopLossLimitPrice.value :
+             selectedOrderType.value === 'LIMIT' ? limitPrice.value :
+             isMarketAsLimitOrder.value ? protectedPrice : 0,
+      triggerPrice: selectedOrderType.value === 'STOP_LOSS' ? triggerPrice.value : 0,
       drvExpiryDate: selectedExpiry.value,
       drvOptionType: drvOptionType
     };
-  } else if (selectedBroker.value?.brokerName === 'Flattrade') {
+  } else if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
     return {
       uid: selectedBroker.value.brokerClientId,
       actid: selectedBroker.value.brokerClientId,
       exch: exchangeSegment,
       tsym: selectedStrike.tradingSymbol,
       qty: selectedQuantity.value,
-      prc: selectedOrderType.value === 'SL-LMT'? stopLossLimitPrice.value : selectedOrderType.value === 'LMT'? limitPrice.value : 0,
-      trgprc: selectedOrderType.value === 'SL-LMT'? triggerPrice.value : 0,
+      prc: selectedOrderType.value === 'SL-LMT' ? stopLossLimitPrice.value :
+           selectedOrderType.value === 'LMT' ? limitPrice.value :
+           isMarketAsLimitOrder.value ? protectedPrice : 0,
+      trgprc: selectedOrderType.value === 'SL-LMT' ? triggerPrice.value : 0,
       prd: selectedProductType.value,
       trantype: transactionType,
-      prctyp: selectedOrderType.value,
-      ret: "DAY"
-      // Add any additional fields specific to Flattrade here
-    };
-  } else if (selectedBroker.value?.brokerName === 'Shoonya') {
-    return {
-      uid: selectedBroker.value.brokerClientId,
-      actid: selectedBroker.value.brokerClientId,
-      exch: exchangeSegment,
-      tsym: selectedStrike.tradingSymbol,
-      qty: selectedQuantity.value,
-      prc: selectedOrderType.value === 'SL-LMT'? stopLossLimitPrice.value : selectedOrderType.value === 'LMT'? limitPrice.value : 0,
-      trgprc: selectedOrderType.value === 'SL-LMT'? triggerPrice.value : 0,
-      prd: selectedProductType.value,
-      trantype: transactionType,
-      prctyp: selectedOrderType.value,
+      prctyp: isMarketAsLimitOrder.value ? 'LMT' : selectedOrderType.value,
       ret: "DAY"
     };
   } else {
@@ -3240,6 +3280,21 @@ const setDhanCredentials = async () => {
     showToast.value = true;
   }
 };
+
+const isMarketProtectionDisabled = computed(() => {
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    return ['MARKET', 'LIMIT', 'STOP_LOSS'].includes(selectedOrderType.value);
+  } else if (['Flattrade', 'Shoonya'].includes(selectedBroker.value?.brokerName)) {
+    return ['MKT', 'LMT', 'SL-LMT'].includes(selectedOrderType.value);
+  }
+  return false;
+});
+watch(selectedOrderType, (newOrderType) => {
+  if (isMarketProtectionDisabled.value || !isMarketAsLimitOrder.value) {
+    marketProtectionPercentage.value = 0;
+  }
+});
+
 const socket = ref(null);
 const latestCallLTP = ref('N/A');
 const latestPutLTP = ref('N/A');
