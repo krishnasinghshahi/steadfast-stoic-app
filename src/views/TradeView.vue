@@ -3189,7 +3189,6 @@ const totalBseEqDayBuyValue = computed(() => {
   }
   return 0;
 });
-
 const totalBrokerage = computed(() => {
   let total = 0;
 
@@ -3204,14 +3203,14 @@ const totalBrokerage = computed(() => {
   const totalEqDerivativeSellValue = totalNfoDaySellValue.value + totalBfoDaySellValue.value;
   const totalEquityDayBuyValue = totalNseEqDayBuyValue.value + totalBseEqDayBuyValue.value;
   const totalEquityDaySellValue = totalNseEqDaySellValue.value + totalBseEqDaySellValue.value;
-  const totalEquityDayValue = totalNseEqDayValue.value + totalBseEqDayValue.value;
+  const totalEquityDayValue = totalNseEqDayValue + totalBseEqDayValue;
 
   if (selectedBroker.value?.brokerName === 'Dhan') {
     // Dhan Brokerage Calculations
     const totalNseEqBrokerage = trades.value
       .filter(trade => trade.exchangeSegment === 'NSE')
       .reduce((total, trade) => {
-        const tradeValue = parseFloat(trade.tradedQuantity * trade.tradedPrice) || 0;
+        const tradeValue = parseFloat(trade.tradedQuantity) * parseFloat(trade.tradedPrice) || 0;
         const brokerage = tradeValue < 66666.67 ? tradeValue * 0.0003 : 20;
         return total + brokerage;
       }, 0);
@@ -3219,7 +3218,7 @@ const totalBrokerage = computed(() => {
     const totalBseEqBrokerage = trades.value
       .filter(trade => trade.exchangeSegment === 'BSE')
       .reduce((total, trade) => {
-        const tradeValue = parseFloat(trade.tradedQuantity * trade.tradedPrice) || 0;
+        const tradeValue = parseFloat(trade.tradedQuantity) * parseFloat(trade.tradedPrice) || 0;
         const brokerage = tradeValue < 66666.67 ? tradeValue * 0.0003 : 20;
         return total + brokerage;
       }, 0);
@@ -3229,7 +3228,7 @@ const totalBrokerage = computed(() => {
     const bfoExchangeCharge = Math.round(totalBfoDayValue * 0.000495 * 100) / 100;
     const equityDerivativeSebiCharge = Math.round(totalEqDerivativeValue * 0.000001 * 100) / 100;
     const equityDerivativeGstCharge = Math.round((nfoExchangeCharge + bfoExchangeCharge + equityDerivativeSebiCharge) * 0.18 * 100) / 100;
-    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003);
+    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003 * 100) / 100;
     const equityDerivativeSttCharge = Math.round(totalEqDerivativeSellValue * 0.000625 * 100) / 100;
 
     const nseEqExchangeCharge = Math.round(totalNseEqDayValue * 0.0000332 * 100) / 100;
@@ -3241,22 +3240,21 @@ const totalBrokerage = computed(() => {
 
     const mcxCommExchangeCharge = Math.round(totalMcxCommDayValue * 0.0005 * 100) / 100;
     const mcxCommSebiCharge = Math.round(totalMcxCommDayValue * 0.000001 * 100) / 100;
-    const mcxCommGstCharge = Math.round((mcxCommExchangeCharge + equitySebiCharge) * 0.18 * 100) / 100;
-    const mcxCommStampdutyCharge = Math.round(totalMcxCommDayBuyValue * 0.00003 *100) / 100;
-    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005);
+    const mcxCommGstCharge = Math.round((mcxCommExchangeCharge + mcxCommSebiCharge) * 0.18 * 100) / 100;
+    const mcxCommStampdutyCharge = Math.round(totalMcxCommDayBuyValue * 0.00003 * 100) / 100;
+    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005 * 100) / 100;
 
     // Brokerage for traded orders
-    for (const order of dhanOrders.value) {
-      if (order.orderStatus === 'TRADED' && ['NSE_NFO', 'BSE_BFO', 'MCX_COMM'].includes(order.exchangeSegment)) {
-        total += 23.6;
-      }
-    }
+    const dhanOrdersBrokerage = dhanOrders.value
+      .filter(order => order.orderStatus === 'TRADED' && ['NSE_NFO', 'BSE_BFO', 'MCX_COMM'].includes(order.exchangeSegment))
+      .reduce((total, order) => total + 23.6, 0);
 
     // Add all charges to total for Dhan
-    total += (nfoExchangeCharge + bfoExchangeCharge + equityDerivativeSebiCharge + equityDerivativeGstCharge + equityDerivativeStampdutyCharge + equityDerivativeSttCharge +
-             nseEqExchangeCharge + bseEqExchangeCharge + equitySebiCharge + equityGstCharge + equityStampdutyCharge + equitySttCharge +
-             mcxCommExchangeCharge + mcxCommSebiCharge + mcxCommGstCharge + mcxCommStampdutyCharge + mcxCommCttCharge +
-             totalNseEqBrokerage + totalBseEqBrokerage);
+    total = nfoExchangeCharge + bfoExchangeCharge + equityDerivativeSebiCharge + equityDerivativeGstCharge + 
+            equityDerivativeStampdutyCharge + equityDerivativeSttCharge + nseEqExchangeCharge + bseEqExchangeCharge + 
+            equitySebiCharge + equityGstCharge + equityStampdutyCharge + equitySttCharge + mcxCommExchangeCharge + 
+            mcxCommSebiCharge + mcxCommGstCharge + mcxCommStampdutyCharge + mcxCommCttCharge + totalNseEqBrokerage + 
+            totalBseEqBrokerage + dhanOrdersBrokerage;
 
   } else if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
     // Flattrade and Shoonya Brokerage Calculations
@@ -3265,35 +3263,39 @@ const totalBrokerage = computed(() => {
     const bfoExchangeCharge = Math.round(totalBfoDayValue * 0.000495 * 100) / 100;
     const equityDerivativeSebiCharge = Math.round(totalEqDerivativeValue * 0.000001 * 100) / 100;
     const equityDerivativeGstCharge = Math.round((nfoExchangeCharge + bfoExchangeCharge + equityDerivativeSebiCharge) * 0.18 * 100) / 100;
-    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003);
+    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003 * 100) / 100;
     const equityDerivativeSttCharge = Math.round(totalEqDerivativeSellValue * 0.000625 * 100) / 100;
 
     const nseEqExchangeCharge = Math.round(totalNseEqDayValue * 0.0000322 * 100) / 100;
-    const nseEqIpftCharge = Math.round(totalNfoDayValue * 0.000001 * 100) / 100;
+    const nseEqIpftCharge = Math.round(totalNseEqDayValue * 0.000001 * 100) / 100;
     const bseEqExchangeCharge = Math.round(totalBseEqDayValue * 0.0000375 * 100) / 100;
     const equitySebiCharge = Math.round(totalEquityDayValue * 0.000001 * 100) / 100;
     const equityGstCharge = Math.round((nseEqExchangeCharge + bseEqExchangeCharge + equitySebiCharge) * 0.18 * 100) / 100;
-    const equityStampdutyCharge = Math.round(totalEquityDayBuyValue * 0.00003);
-    const equitySttCharge = Math.round(totalEquityDaySellValue * 0.00025);
+    const equityStampdutyCharge = Math.round(totalEquityDayBuyValue * 0.00003 * 100) / 100;
+    const equitySttCharge = Math.round(totalEquityDaySellValue * 0.00025 * 100) / 100;
 
     const mcxCommExchangeCharge = Math.round(totalMcxCommDayValue * 0.0005 * 100) / 100;
     const mcxCommSebiCharge = Math.round(totalMcxCommDayValue * 0.000001 * 100) / 100;
-    const mcxCommGstCharge = Math.round((mcxCommExchangeCharge + equitySebiCharge) * 0.18 * 100) / 100;
-    const mcxCommStampdutyCharge = Math.round(totalMcxCommDayBuyValue * 0.00003);
-    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005);
+    const mcxCommGstCharge = Math.round((mcxCommExchangeCharge + mcxCommSebiCharge) * 0.18 * 100) / 100;
+    const mcxCommStampdutyCharge = Math.round(totalMcxCommDayBuyValue * 0.00003 * 100) / 100;
+    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005 * 100) / 100;
 
     // Add charges to total for Flattrade and Shoonya
-    total += (nfoExchangeCharge + nfoIpftCharge + bfoExchangeCharge + equityDerivativeSebiCharge + equityDerivativeGstCharge + equityDerivativeStampdutyCharge + equityDerivativeSttCharge +
-             nseEqExchangeCharge + nseEqIpftCharge + bseEqExchangeCharge + equitySebiCharge + equityGstCharge + equityStampdutyCharge + equitySttCharge +
-             mcxCommExchangeCharge + mcxCommSebiCharge + mcxCommGstCharge + mcxCommStampdutyCharge + mcxCommCttCharge);
-
+    total = nfoExchangeCharge + nfoIpftCharge + bfoExchangeCharge + equityDerivativeSebiCharge + 
+            equityDerivativeGstCharge + equityDerivativeStampdutyCharge + equityDerivativeSttCharge +
+            nseEqExchangeCharge + nseEqIpftCharge + bseEqExchangeCharge + equitySebiCharge + 
+            equityGstCharge + equityStampdutyCharge + equitySttCharge + mcxCommExchangeCharge + 
+            mcxCommSebiCharge + mcxCommGstCharge + mcxCommStampdutyCharge + mcxCommCttCharge;
   }
 
-  return total;
+  return parseFloat(total.toFixed(2));
 });
 
-
-const netPnl = computed(() => totalProfit.value - totalBrokerage.value);
+const netPnl = computed(() => {
+  const profit = parseFloat(totalProfit.value) || 0;
+  const brokerage = parseFloat(totalBrokerage.value) || 0;
+  return parseFloat((profit - brokerage).toFixed(2));
+});
 
 const setDefaultExpiry = () => {
   if (expiryDates.value.length > 0) {
