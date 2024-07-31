@@ -26,12 +26,12 @@ export default {
         show(newVal) {
             if (newVal) {
                 // Play notification sound
-                const audio = new Audio('/cyberpunk-notification.mp3');
+                const audio = new Audio('/ok.wav');
                 audio.play();
 
                 setTimeout(() => {
                     this.hide();
-                }, 3000); // Hide after 3 seconds
+                }, 1500); // Hide after 1.5 seconds
             }
         }
     },
