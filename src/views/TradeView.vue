@@ -3228,7 +3228,7 @@ const totalBrokerage = computed(() => {
     const bfoExchangeCharge = Math.round(totalBfoDayValue * 0.000495 * 100) / 100;
     const equityDerivativeSebiCharge = Math.round(totalEqDerivativeValue * 0.000001 * 100) / 100;
     const equityDerivativeGstCharge = Math.round((nfoExchangeCharge + bfoExchangeCharge + equityDerivativeSebiCharge) * 0.18 * 100) / 100;
-    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003 * 100) / 100;
+    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003);
     const equityDerivativeSttCharge = Math.round(totalEqDerivativeSellValue * 0.000625 * 100) / 100;
 
     const nseEqExchangeCharge = Math.round(totalNseEqDayValue * 0.0000332 * 100) / 100;
@@ -3242,7 +3242,7 @@ const totalBrokerage = computed(() => {
     const mcxCommSebiCharge = Math.round(totalMcxCommDayValue * 0.000001 * 100) / 100;
     const mcxCommGstCharge = Math.round((mcxCommExchangeCharge + mcxCommSebiCharge) * 0.18 * 100) / 100;
     const mcxCommStampdutyCharge = Math.round(totalMcxCommDayBuyValue * 0.00003 * 100) / 100;
-    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005 * 100) / 100;
+    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005);
 
     // Brokerage for traded orders
     const dhanOrdersBrokerage = dhanOrders.value
@@ -3263,22 +3263,22 @@ const totalBrokerage = computed(() => {
     const bfoExchangeCharge = Math.round(totalBfoDayValue * 0.000495 * 100) / 100;
     const equityDerivativeSebiCharge = Math.round(totalEqDerivativeValue * 0.000001 * 100) / 100;
     const equityDerivativeGstCharge = Math.round((nfoExchangeCharge + bfoExchangeCharge + equityDerivativeSebiCharge) * 0.18 * 100) / 100;
-    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003 * 100) / 100;
-    const equityDerivativeSttCharge = Math.round(totalEqDerivativeSellValue * 0.000625 * 100) / 100;
+    const equityDerivativeStampdutyCharge = Math.round(totalEqDerivativeBuyValue * 0.0003);
+    const equityDerivativeSttCharge = Math.round(totalEqDerivativeSellValue * 0.000625);
 
     const nseEqExchangeCharge = Math.round(totalNseEqDayValue * 0.0000322 * 100) / 100;
     const nseEqIpftCharge = Math.round(totalNseEqDayValue * 0.000001 * 100) / 100;
     const bseEqExchangeCharge = Math.round(totalBseEqDayValue * 0.0000375 * 100) / 100;
     const equitySebiCharge = Math.round(totalEquityDayValue * 0.000001 * 100) / 100;
     const equityGstCharge = Math.round((nseEqExchangeCharge + bseEqExchangeCharge + equitySebiCharge) * 0.18 * 100) / 100;
-    const equityStampdutyCharge = Math.round(totalEquityDayBuyValue * 0.00003 * 100) / 100;
-    const equitySttCharge = Math.round(totalEquityDaySellValue * 0.00025 * 100) / 100;
+    const equityStampdutyCharge = Math.round(totalEquityDayBuyValue * 0.00003);
+    const equitySttCharge = Math.round(totalEquityDaySellValue * 0.00025);
 
     const mcxCommExchangeCharge = Math.round(totalMcxCommDayValue * 0.0005 * 100) / 100;
     const mcxCommSebiCharge = Math.round(totalMcxCommDayValue * 0.000001 * 100) / 100;
     const mcxCommGstCharge = Math.round((mcxCommExchangeCharge + mcxCommSebiCharge) * 0.18 * 100) / 100;
-    const mcxCommStampdutyCharge = Math.round(totalMcxCommDayBuyValue * 0.00003 * 100) / 100;
-    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005 * 100) / 100;
+    const mcxCommStampdutyCharge = Math.round(totalMcxCommDayBuyValue * 0.00003);
+    const mcxCommCttCharge = Math.round(totalMcxCommDaySellValue * 0.0005);
 
     // Add charges to total for Flattrade and Shoonya
     total = nfoExchangeCharge + nfoIpftCharge + bfoExchangeCharge + equityDerivativeSebiCharge + 
