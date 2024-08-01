@@ -2658,12 +2658,13 @@ const sendModifyOrder = async (order) => {
     const modifiedPrice = order.modifiedPrice;
     const modifiedQuantity = order.modifiedQuantity;
     const modifiedTriggerPrice = order.modifiedTriggerPrice;
+    const orderId = selectedBroker.value?.brokerName === 'Dhan' ? order.orderId : order.norenordno;
 
     if (selectedBroker.value?.brokerName === 'Dhan') {
       const dhanDetails = JSON.parse(localStorage.getItem('broker_Dhan') || '{}');
       const payload = {
         brokerClientId: selectedBroker.value.brokerClientId,
-        orderId: order.orderId,
+        orderId: orderId,
         quantity: modifiedQuantity,
         price: modifiedPrice,
         triggerPrice: modifiedTriggerPrice
@@ -2678,14 +2679,15 @@ const sendModifyOrder = async (order) => {
     else if (selectedBroker.value?.brokerName === 'Flattrade') {
       const FLATTRADE_API_TOKEN = localStorage.getItem('FLATTRADE_API_TOKEN');
       const payload = qs.stringify({
-        uid: selectedBroker.value.brokerClientId,
-        actid: selectedBroker.value.brokerClientId,
-        norenordno: order.norenordno,
-        qty: modifiedQuantity,
+        exch: "",
+        norenordno: orderID,
         prc: modifiedPrice,
-        trgprc: modifiedTriggerPrice
+        qty: modifiedQuantity,
+        tsym: "",
+        ret: "DAY",
+        trgprc: modifiedTriggerPrice,
+        uid: selectedBroker.value.brokerClientID
       });
-
       response = await axios.post('http://localhost:3000/flattradeModifyOrder', payload, {
         headers: {
           'Authorization': `Bearer ${FLATTRADE_API_TOKEN}`,
@@ -2696,12 +2698,14 @@ const sendModifyOrder = async (order) => {
     else if (selectedBroker.value?.brokerName === 'Shoonya') {
       const SHOONYA_API_TOKEN = localStorage.getItem('SHOONYA_API_TOKEN');
       const payload = qs.stringify({
-        uid: selectedBroker.value.brokerClientId,
-        actid: selectedBroker.value.brokerClientId,
-        norenordno: order.norenordno,
-        qty: modifiedQuantity,
+        exch: "",
+        norenordno: orderID,
         prc: modifiedPrice,
-        trgprc: modifiedTriggerPrice
+        qty: modifiedQuantity,
+        tsym: "",
+        ret: "DAY",
+        trgprc: modifiedTriggerPrice,
+        uid: selectedBroker.value.brokerClientID
       });
 
       response = await axios.post('http://localhost:3000/shoonyaModifyOrder', payload, {
