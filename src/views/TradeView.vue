@@ -2659,6 +2659,8 @@ const sendModifyOrder = async (order) => {
     const modifiedQuantity = order.modifiedQuantity;
     const modifiedTriggerPrice = order.modifiedTriggerPrice;
     const orderId = selectedBroker.value?.brokerName === 'Dhan' ? order.orderId : order.norenordno;
+    const exch = selectedBroker.value?.brokerName === 'Dhan' ? order.exchangeSymbol : order.exch;
+    const tsym = selectedBroker.value?.brokerName === 'Dhan' ? order.tradingSymbol : order.tsym;
 
     if (selectedBroker.value?.brokerName === 'Dhan') {
       const dhanDetails = JSON.parse(localStorage.getItem('broker_Dhan') || '{}');
@@ -2679,11 +2681,11 @@ const sendModifyOrder = async (order) => {
     else if (selectedBroker.value?.brokerName === 'Flattrade') {
       const FLATTRADE_API_TOKEN = localStorage.getItem('FLATTRADE_API_TOKEN');
       const payload = qs.stringify({
-        exch: "",
+        exch: exch,
         norenordno: orderID,
         prc: modifiedPrice,
         qty: modifiedQuantity,
-        tsym: "",
+        tsym: tsym,
         ret: "DAY",
         trgprc: modifiedTriggerPrice,
         uid: selectedBroker.value.brokerClientID
@@ -2698,11 +2700,11 @@ const sendModifyOrder = async (order) => {
     else if (selectedBroker.value?.brokerName === 'Shoonya') {
       const SHOONYA_API_TOKEN = localStorage.getItem('SHOONYA_API_TOKEN');
       const payload = qs.stringify({
-        exch: "",
+        exch: exch,
         norenordno: orderID,
         prc: modifiedPrice,
         qty: modifiedQuantity,
-        tsym: "",
+        tsym: tsym,
         ret: "DAY",
         trgprc: modifiedTriggerPrice,
         uid: selectedBroker.value.brokerClientID
