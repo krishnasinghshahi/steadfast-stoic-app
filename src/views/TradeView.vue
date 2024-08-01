@@ -830,13 +830,39 @@
                 <td>{{ dhanOrder.transactionType }}</td>
                 <td>{{ dhanOrder.orderId }}</td>
                 <td>{{ dhanOrder.tradingSymbol }}</td>
-                <td>{{ dhanOrder.quantity }}</td>
-                <td>{{ dhanOrder.price }}</td>
-                <td v-if="['PENDING', 'OPEN', 'REJECTED', 'TRANSIT', 'EXPIRED', 'CANCELLED', 'TRADED'].includes(dhanOrder.orderStatus)">
-                    {{ dhanOrder.triggerPrice === 0 ? '-' : dhanOrder.triggerPrice }}</td>
+                <td>
+                  <div v-if="dhanOrder.isModifying">
+                    <button @click="adjustOrderQuantity(dhanOrder, -1)" class="btn btn-sm btn-outline-danger">-</button>
+                    <input v-model="dhanOrder.modifiedQuantity" type="number" step="1" class="form-control form-control-sm d-inline-block w-50">
+                    <button @click="adjustOrderQuantity(dhanOrder, 1)" class="btn btn-sm btn-outline-success">+</button>
+                  </div>
+                  <span v-else>{{ dhanOrder.quantity }}</span>
+                </td>
+                <td>
+                  <div v-if="dhanOrder.isModifying">
+                    <button @click="adjustOrderPrice(dhanOrder, -0.05)" class="btn btn-sm btn-outline-danger">-</button>
+                    <input v-model="dhanOrder.modifiedPrice" type="number" step="0.05" class="form-control form-control-sm d-inline-block w-50">
+                    <button @click="adjustOrderPrice(dhanOrder, 0.05)" class="btn btn-sm btn-outline-success">+</button>
+                  </div>
+                  <span v-else>{{ dhanOrder.price }}</span>
+                </td>
+                <td>
+                  <div v-if="dhanOrder.isModifying">
+                    <button @click="adjustOrderTriggerPrice(dhanOrder, -0.05)" class="btn btn-sm btn-outline-danger">-</button>
+                    <input v-model="dhanOrder.modifiedTriggerPrice" type="number" step="0.05" class="form-control form-control-sm d-inline-block w-50">
+                    <button @click="adjustOrderTriggerPrice(dhanOrder, 0.05)" class="btn btn-sm btn-outline-success">+</button>
+                  </div>
+                  <span v-else>{{ dhanOrder.triggerPrice === 0 ? '-' : dhanOrder.triggerPrice }}</span>
+                </td>
                 <td>{{ dhanOrder.createTime }}</td>
                 <td>{{ dhanOrder.orderStatus }}</td>
                 <td v-if="dhanOrder.orderStatus === 'PENDING'">
+                  <button v-if="!dhanOrder.isModifying" @click="startModifyOrder(dhanOrder)" class="btn btn-sm btn-outline-primary me-2">
+                    ✏️
+                  </button>
+                  <button v-else @click="sendModifyOrder(dhanOrder)" class="btn btn-sm btn-outline-success me-2">
+                    ✓
+                  </button>
                   <button @click="cancelOpenOrder(dhanOrder.orderId)" class="btn btn-sm btn-outline-danger">
                     🗑️
                   </button>
@@ -876,9 +902,30 @@
                         <br />
                         {{ item.order.tsym }}
                       </td>
-                      <td>{{ item.order.qty }}</td>
-                      <td>{{ item.order.prc }}</td>
-                      <td>{{ item.order.trgprc || '-' }}</td>
+                      <td>
+                        <div v-if="item.order.isModifying">
+                          <button @click="adjustOrderQuantity(item.order, -1)" class="btn btn-sm btn-outline-danger">-</button>
+                          <input v-model="item.order.modifiedQuantity" type="number" step="1" class="form-control form-control-sm d-inline-block w-50">
+                          <button @click="adjustOrderQuantity(item.order, 1)" class="btn btn-sm btn-outline-success">+</button>
+                        </div>
+                        <span v-else>{{ item.order.qty }}</span>
+                      </td>
+                      <td>
+                        <div v-if="item.order.isModifying">
+                          <button @click="adjustOrderPrice(item.order, -0.05)" class="btn btn-sm btn-outline-danger">-</button>
+                          <input v-model="item.order.modifiedPrice" type="number" step="0.05" class="form-control form-control-sm d-inline-block w-50">
+                          <button @click="adjustOrderPrice(item.order, 0.05)" class="btn btn-sm btn-outline-success">+</button>
+                        </div>
+                        <span v-else>{{ item.order.prc }}</span>
+                      </td>
+                      <td>
+                        <div v-if="item.order.isModifying">
+                          <button @click="adjustOrderTriggerPrice(item.order, -0.05)" class="btn btn-sm btn-outline-danger">-</button>
+                          <input v-model="item.order.modifiedTriggerPrice" type="number" step="0.05" class="form-control form-control-sm d-inline-block w-50">
+                          <button @click="adjustOrderTriggerPrice(item.order, 0.05)" class="btn btn-sm btn-outline-success">+</button>
+                        </div>
+                        <span v-else>{{ item.order.trgprc || '-' }}</span>
+                      </td>
                       <td>{{ formatTime(item.order.norentm) }}</td>
                       <td :class="{
                         'text-danger': item.order.status === 'REJECTED',
@@ -888,6 +935,12 @@
                         {{ item.order.rejreason }}
                       </td>
                       <td v-if="item.order.status === 'OPEN'">
+                        <button v-if="!item.order.isModifying" @click="startModifyOrder(item.order)" class="btn btn-sm btn-outline-primary me-2">
+                          ✏️
+                        </button>
+                        <button v-else @click="sendModifyOrder(item.order)" class="btn btn-sm btn-outline-success me-2">
+                          ✓
+                        </button>
                         <button @click="cancelOpenOrder(item.order.norenordno)" class="btn btn-sm btn-outline-danger">
                           🗑️
                         </button>
@@ -946,9 +999,30 @@
                         <br />
                         {{ item.order.tsym }}
                       </td>
-                      <td>{{ item.order.qty }}</td>
-                      <td>{{ item.order.prc }}</td>
-                      <td>{{ item.order.trgprc || '-' }}</td>
+                      <td>
+                        <div v-if="item.order.isModifying">
+                          <button @click="adjustOrderQuantity(item.order, -1)" class="btn btn-sm btn-outline-danger">-</button>
+                          <input v-model="item.order.modifiedQuantity" type="number" step="1" class="form-control form-control-sm d-inline-block w-50">
+                          <button @click="adjustOrderQuantity(item.order, 1)" class="btn btn-sm btn-outline-success">+</button>
+                        </div>
+                        <span v-else>{{ item.order.qty }}</span>
+                      </td>
+                      <td>
+                        <div v-if="item.order.isModifying">
+                          <button @click="adjustOrderPrice(item.order, -0.05)" class="btn btn-sm btn-outline-danger">-</button>
+                          <input v-model="item.order.modifiedPrice" type="number" step="0.05" class="form-control form-control-sm d-inline-block w-50">
+                          <button @click="adjustOrderPrice(item.order, 0.05)" class="btn btn-sm btn-outline-success">+</button>
+                        </div>
+                        <span v-else>{{ item.order.prc }}</span>
+                      </td>
+                      <td>
+                        <div v-if="item.order.isModifying">
+                          <button @click="adjustOrderTriggerPrice(item.order, -0.05)" class="btn btn-sm btn-outline-danger">-</button>
+                          <input v-model="item.order.modifiedTriggerPrice" type="number" step="0.05" class="form-control form-control-sm d-inline-block w-50">
+                          <button @click="adjustOrderTriggerPrice(item.order, 0.05)" class="btn btn-sm btn-outline-success">+</button>
+                        </div>
+                        <span v-else>{{ item.order.trgprc || '-' }}</span>
+                      </td>
                       <td>{{ formatTime(item.order.norentm) }}</td>
                       <td :class="{
                         'text-danger': item.order.status === 'REJECTED',
@@ -958,6 +1032,12 @@
                         {{ item.order.rejreason }}
                       </td>
                       <td v-if="item.order.status === 'OPEN'">
+                        <button v-if="!item.order.isModifying" @click="startModifyOrder(item.order)" class="btn btn-sm btn-outline-primary me-2">
+                          ✏️
+                        </button>
+                        <button v-else @click="sendModifyOrder(item.order)" class="btn btn-sm btn-outline-success me-2">
+                          ✓
+                        </button>
                         <button @click="cancelOpenOrder(item.order.norenordno)" class="btn btn-sm btn-outline-danger">
                           🗑️
                         </button>
@@ -2550,6 +2630,112 @@ const placeOrderForPosition = async (transactionType, optionType, position) => {
   }
 };
 
+const adjustOrderQuantity = (order, adjustment) => {
+  order.modifiedQuantity = Math.max(1, Number(order.modifiedQuantity || order.quantity || order.qty) + adjustment);
+};
+
+const adjustOrderPrice = (order, adjustment) => {
+  const currentPrice = Number(order.modifiedPrice || order.price || order.prc);
+  order.modifiedPrice = Number((currentPrice + adjustment).toFixed(2));
+};
+
+const adjustOrderTriggerPrice = (order, adjustment) => {
+  const currentTriggerPrice = Number(order.modifiedTriggerPrice || order.triggerPrice || order.trgprc || 0);
+  order.modifiedTriggerPrice = Number((currentTriggerPrice + adjustment).toFixed(2));
+};
+
+const startModifyOrder = (order) => {
+  order.isModifying = true;
+  order.modifiedQuantity = Number(order.quantity || order.qty);
+  order.modifiedPrice = Number(order.price || order.prc).toFixed(2);
+  order.modifiedTriggerPrice = Number(order.triggerPrice || order.trgprc || 0).toFixed(2);
+};
+// function-modify order
+const sendModifyOrder = async (order) => {
+  try {
+    console.log(`Modifying order for ${selectedBroker.value?.brokerName}:`, order);
+    let response;
+    const modifiedPrice = order.modifiedPrice;
+    const modifiedQuantity = order.modifiedQuantity;
+    const modifiedTriggerPrice = order.modifiedTriggerPrice;
+
+    if (selectedBroker.value?.brokerName === 'Dhan') {
+      const dhanDetails = JSON.parse(localStorage.getItem('broker_Dhan') || '{}');
+      const payload = {
+        brokerClientId: selectedBroker.value.brokerClientId,
+        orderId: order.orderId,
+        quantity: modifiedQuantity,
+        price: modifiedPrice,
+        triggerPrice: modifiedTriggerPrice
+      };
+
+      response = await axios.put(`http://localhost:3000/dhanModifyOrder/${order.orderId}`, payload, {
+        params: {
+          DHAN_API_TOKEN: dhanDetails.apiToken
+        }
+      });
+    } 
+    else if (selectedBroker.value?.brokerName === 'Flattrade') {
+      const FLATTRADE_API_TOKEN = localStorage.getItem('FLATTRADE_API_TOKEN');
+      const payload = qs.stringify({
+        uid: selectedBroker.value.brokerClientId,
+        actid: selectedBroker.value.brokerClientId,
+        norenordno: order.norenordno,
+        qty: modifiedQuantity,
+        prc: modifiedPrice,
+        trgprc: modifiedTriggerPrice
+      });
+
+      response = await axios.post('http://localhost:3000/flattradeModifyOrder', payload, {
+        headers: {
+          'Authorization': `Bearer ${FLATTRADE_API_TOKEN}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+    }
+    else if (selectedBroker.value?.brokerName === 'Shoonya') {
+      const SHOONYA_API_TOKEN = localStorage.getItem('SHOONYA_API_TOKEN');
+      const payload = qs.stringify({
+        uid: selectedBroker.value.brokerClientId,
+        actid: selectedBroker.value.brokerClientId,
+        norenordno: order.norenordno,
+        qty: modifiedQuantity,
+        prc: modifiedPrice,
+        trgprc: modifiedTriggerPrice
+      });
+
+      response = await axios.post('http://localhost:3000/shoonyaModifyOrder', payload, {
+        headers: {
+          'Authorization': `Bearer ${SHOONYA_API_TOKEN}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+    }
+
+    console.log('Order modified successfully:', response.data);
+    order.isModifying = false;
+    
+    // Refresh the orders
+    if (selectedBroker.value?.brokerName === 'Dhan') {
+      await fetchDhanOrdersTradesBook();
+    } else if (selectedBroker.value?.brokerName === 'Flattrade') {
+      await fetchFlattradeOrdersTradesBook();
+    } else if (selectedBroker.value?.brokerName === 'Shoonya') {
+      await fetchShoonyaOrdersTradesBook();
+    }
+
+    // Update fund limits
+    await updateFundLimits();
+
+    toastMessage.value = 'Order modified successfully';
+    showToast.value = true;
+  } catch (error) {
+    console.error('Failed to modify order:', error);
+    console.error('Error response:', error.response?.data);
+    toastMessage.value = `Failed to modify order: ${error.response?.data?.message || error.message}`;
+    showToast.value = true;
+  }
+};
 // Close all positions for Dhan, Flattrade, or Shoonya
 const closeAllPositions = async () => {
   try {
