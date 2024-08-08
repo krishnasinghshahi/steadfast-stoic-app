@@ -11,7 +11,7 @@
           <div class="d-flex align-items-center">
             <select class="form-select" id="ChangeBroker" aria-label="Change Broker" v-model="selectedBrokerName"
               @change="updateSelectedBroker">
-              <option value="" disabled selected>Select a broker</option>
+              <option value="" disabled>Select a broker</option>
               <option v-for="brokerName in availableBrokers" :key="brokerName" :value="brokerName">
                 {{ brokerName }}
               </option>
@@ -76,18 +76,6 @@
 
     </div>
   </section>
-
-  <!-- <section class="row py-3">
-    <div class="col-12">
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="toggleLineChart" v-model="showLineChart">
-        <label class="form-check-label" for="toggleLineChart">
-          Show MTM Chart
-        </label>
-      </div>
-      <LineChart v-if="showLineChart" :profitData="profitData" />
-    </div>
-  </section> -->
 
   <!-- Total Profit & Net PNL -->
   <section class="row py-3">
@@ -809,186 +797,184 @@
           </p>
         </div>
         <div class="tab-pane fade" id="trades-tab-pane" role="tabpanel" aria-labelledby="trades-tab" tabindex="0">
-          <!-- Dhan Trades -->
-          <table class="table table-hover" v-if="activeFetchFunction === 'fetchDhanOrdersTradesBook'">
-            <thead>
-              <tr>
-                <th>Side</th>
-                <th>Order ID</th>
-                <th>Symbol</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Trigger <br> Price</th>
-                <th>Execution Time</th>
-                <th>Status</th>
-                <th class="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="dhanOrder in dhanOrders" :key="dhanOrder.orderId">
-                <td>{{ dhanOrder.transactionType }}</td>
-                <td>{{ dhanOrder.orderId }}</td>
-                <td>{{ dhanOrder.tradingSymbol }}</td>
-                <td>{{ dhanOrder.quantity }}</td>
-                <td>{{ dhanOrder.price }}</td>
-                <td v-if="['PENDING', 'OPEN', 'REJECTED', 'TRANSIT', 'EXPIRED', 'CANCELLED', 'TRADED'].includes(dhanOrder.orderStatus)">
-                    {{ dhanOrder.triggerPrice === 0 ? '-' : dhanOrder.triggerPrice }}</td>
-                <td>{{ dhanOrder.createTime }}</td>
-                <td>{{ dhanOrder.orderStatus }}</td>
-                <td v-if="dhanOrder.orderStatus === 'PENDING'">
-                  <button @click="cancelOpenOrder(dhanOrder.orderId)" class="btn btn-sm btn-outline-danger">
-                    🗑️
-                  </button>
-                </td>
-                <td v-else> </td>
-              </tr>
-              <tr v-if="dhanOrders.length === 0">
-                <td colspan="6" class="text-center">No orders or trades on selected broker {{
-                  selectedBroker.brokerName }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <!-- Flattrade Trades -->
-          <div v-if="activeFetchFunction === 'fetchFlattradeOrdersTradesBook'">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th scope="col">Type</th>
-                  <th scope="col">Side</th>
-                  <th scope="col">Details</th>
-                  <th scope="col">Qty</th>
-                  <th scope="col">Price</th>
-                  <th scope="col">Trigger <br> Price</th>
-                  <th scope="col">Time</th>
-                  <th scope="col">Status & Reason</th>
-                  <th scope="col" class="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template v-if="combinedOrdersAndTrades.length">
-                  <template v-for="item in combinedOrdersAndTrades" :key="item.norenordno">
-                    <tr v-if="item.order.status !== 'COMPLETE'">
-                      <td>Order</td>
-                      <td>{{ item.order.trantype }}</td>
-                      <td>
-                        {{ item.order.norenordno }}
-                        <br />
-                        {{ item.order.tsym }}
-                      </td>
-                      <td>{{ item.order.qty }}</td>
-                      <td>{{ item.order.prc }}</td>
-                      <td>{{ item.order.trgprc || '-' }}</td>
-                      <td>{{ formatTime(item.order.norentm) }}</td>
-                      <td :class="{
-                        'text-danger': item.order.status === 'REJECTED',
-                        'text-warning': item.order.status === 'PENDING' || item.order.status === 'OPEN'
-                      }">
-                        {{ item.order.status }}
-                        {{ item.order.rejreason }}
-                      </td>
-                      <td v-if="item.order.status === 'OPEN'">
-                        <button @click="cancelOpenOrder(item.order.norenordno)" class="btn btn-sm btn-outline-danger">
-                          🗑️
-                        </button>
-                      </td>
-                      <td v-else> </td>
-                    </tr>
-                    <tr v-if="item.trade" class="nested-trade-row">
-                      <td>Trade</td>
-                      <td>{{ item.trade.trantype }}</td>
-                      <td>
-                        {{ item.trade.norenordno }}
-                        <br />
-                        {{ item.trade.tsym }}
-                      </td>
-                      <td>{{ item.trade.qty }}</td>
-                      <td>{{ item.trade.flprc }}</td>
-                      <td> - </td>
-                      <td>{{ formatTime(item.trade.norentm) }}</td>
-                      <td class="text-success">{{ item.trade.stat === 'Ok' ? 'EXECUTED' : item.trade.stat }}</td>
-                      <td> </td>
-                    </tr>
-                  </template>
-                </template>
-                <tr v-else>
-                  <td colspan="9" class="text-center">No orders or trades on selected broker {{
-                    selectedBroker.brokerName }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <!-- Shoonya Trades -->
-          <div v-if="activeFetchFunction === 'fetchShoonyaOrdersTradesBook'">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th scope="col">Type</th>
-                  <th scope="col">Side</th>
-                  <th scope="col">Details</th>
-                  <th scope="col">Qty</th>
-                  <th scope="col">Price</th>
-                  <th scope="col">Trigger <br> Price</th>
-                  <th scope="col">Time</th>
-                  <th scope="col">Status & Reason</th>
-                  <th scope="col" class="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template v-if="combinedOrdersAndTrades.length">
-                  <template v-for="item in combinedOrdersAndTrades" :key="item.norenordno">
-                    <tr v-if="item.order.status !== 'COMPLETE'">
-                      <td>Order</td>
-                      <td>{{ item.order.trantype }}</td>
-                      <td>
-                        {{ item.order.norenordno }}
-                        <br />
-                        {{ item.order.tsym }}
-                      </td>
-                      <td>{{ item.order.qty }}</td>
-                      <td>{{ item.order.prc }}</td>
-                      <td>{{ item.order.trgprc || '-' }}</td>
-                      <td>{{ formatTime(item.order.norentm) }}</td>
-                      <td :class="{
-                        'text-danger': item.order.status === 'REJECTED',
-                        'text-warning': item.order.status === 'PENDING' || item.order.status === 'OPEN'
-                      }">
-                        {{ item.order.status }}
-                        {{ item.order.rejreason }}
-                      </td>
-                      <td v-if="item.order.status === 'OPEN'">
-                        <button @click="cancelOpenOrder(item.order.norenordno)" class="btn btn-sm btn-outline-danger">
-                          🗑️
-                        </button>
-                      </td>
-                      <td v-else> </td>
-                    </tr>
-                    <tr v-if="item.trade" class="nested-trade-row">
-                      <td>Trade</td>
-                      <td>{{ item.trade.trantype }}</td>
-                      <td>
-                        {{ item.trade.norenordno }}
-                        <br />
-                        {{ item.trade.tsym }}
-                      </td>
-                      <td>{{ item.trade.qty }}</td>
-                      <td>{{ item.trade.flprc }}</td>
-                      <td> - </td>
-                      <td>{{ formatTime(item.trade.norentm) }}</td>
-                      <td class="text-success">{{ item.trade.stat === 'Ok' ? 'EXECUTED' : item.trade.stat }}</td>
-                      <td> </td>
-                    </tr>
-                  </template>
-                </template>
-                <tr v-else>
-                  <td colspan="9" class="text-center">No orders or trades on selected broker {{
-                    selectedBroker.brokerName }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <!-- Dhan Trades -->
+<div v-if="activeFetchFunction === 'fetchDhanOrdersTradesBook'">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Side</th>
+        <th>Order ID<br>Symbol</th>
+        <th>Order Type</th>
+        <th>Quantity</th>
+        <th>Price & <br> Trigger Price</th>
+        <th>Execution Time</th>
+        <th>Status</th>
+        <th class="text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="dhanOrder in dhanOrders" :key="dhanOrder.orderId">
+        <td>{{ dhanOrder.transactionType }}</td>
+        <td>{{ dhanOrder.orderId }}<br>{{ dhanOrder.tradingSymbol }}</td>
+        <td>
+          <template v-if="!modifyingOrders[dhanOrder.orderId]">
+            {{ dhanOrder.orderType }}
+          </template>
+          <select v-else v-model="modifiedOrderData[dhanOrder.orderId].orderType" @change="handleOrderTypeChange(dhanOrder)" class="form-select form-select-sm">
+            <option value="MARKET">Market</option>
+            <option value="LIMIT">Limit</option>
+            <option value="STOP_LOSS">Stop Loss</option>
+          </select>
+        </td>
+        <td>
+          <template v-if="!modifyingOrders[dhanOrder.orderId]">
+            {{ dhanOrder.quantity }}
+          </template>
+          <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].quantity" type="number" @input="validateInput(dhanOrder, 'quantity')" class="form-control form-control-sm" />
+        </td>
+        <td>
+          <template v-if="!modifyingOrders[dhanOrder.orderId]">
+            {{ dhanOrder.price }}
+          </template>
+          <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].price" type="number" step="0.05" @input="validateInput(dhanOrder, 'price')" :disabled="modifiedOrderData[dhanOrder.orderId].orderType === 'MARKET'" class="form-control form-control-sm" />
+        <br>
+          <template v-if="!modifyingOrders[dhanOrder.orderId]">
+            {{ dhanOrder.triggerPrice === 0 ? '' : dhanOrder.triggerPrice }}
+          </template>
+          <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].triggerPrice" type="number" step="0.05" @input="handleTriggerPriceChange(dhanOrder)" :disabled="modifiedOrderData[dhanOrder.orderId].orderType !== 'STOP_LOSS'" class="form-control form-control-sm" />
+        </td>
+        <td>{{ formatTime(dhanOrder.createTime) }}</td>
+        <td>{{ dhanOrder.orderStatus }}</td>
+        <td v-if="dhanOrder.orderStatus === 'PENDING'" class="text-center">
+          <template v-if="!modifyingOrders[dhanOrder.orderId]">
+            <button @click="setModifyOrder(dhanOrder.orderId)" title="Edit" class="btn btn-sm btn-outline-primary">
+              ✏️
+            </button>
+            <button @click="cancelOpenOrder(dhanOrder.orderId)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
+              🗑️
+            </button>
+          </template>
+          <template v-else>
+            <div class="btn-group btn-group-sm">
+              <button @click="modifyOpenOrder(dhanOrder.orderId)" :disabled="!isOrderModified(dhanOrder.orderId) || !isInputValid(dhanOrder.orderId)" title="Confirm Modification" class="btn btn-sm btn-success">
+                ✓
+              </button>
+              <button @click="cancelModifyOrder(dhanOrder.orderId)" title="Cancel Modification" class="btn btn-sm btn-secondary">
+                ✗
+              </button>
+              <button @click="cancelOpenOrder(dhanOrder.orderId)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
+                🗑️
+              </button>
+            </div>
+          </template>
+        </td>
+        <td v-else></td>
+      </tr>
+      <tr v-if="dhanOrders.length === 0">
+        <td colspan="10" class="text-center">No orders or trades on selected broker {{ selectedBroker.brokerName }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
+<!-- Flattrade and Shoonya Trades -->
+<div v-if="activeFetchFunction === 'fetchFlattradeOrdersTradesBook' || activeFetchFunction === 'fetchShoonyaOrdersTradesBook'">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Side</th>
+        <th>Order ID & <br> Symbol</th>
+        <th>Order Type</th>
+        <th>Quantity</th>
+        <th>Price & Trigger Price</th>
+        <th>Time</th>
+        <th>Status & Reason</th>
+        <th class="text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <template v-for="item in combinedOrdersAndTrades" :key="item.order.norenordno">
+        <tr v-if="item.order.status !== 'COMPLETE'">
+          <td title="Order">🛒 {{ item.order.trantype }}</td>
+          <td>{{ item.order.norenordno }} <br> {{ item.order.tsym }}</td>
+          <td>
+            <template v-if="!modifyingOrders[item.order.norenordno]">
+              {{ item.order.prctyp }}
+            </template>
+            <select v-else v-model="modifiedOrderData[item.order.norenordno].orderType" @change="handleOrderTypeChange(item.order)" class="form-select form-select-sm">
+              <option value="MKT">Market</option>
+              <option value="LMT">Limit</option>
+              <option value="SL-LMT">Stop Loss</option>
+            </select>
+          </td>
+          <td>
+            <template v-if="!modifyingOrders[item.order.norenordno]">
+              {{ item.order.qty }}
+            </template>
+            <input v-else v-model.number="modifiedOrderData[item.order.norenordno].quantity" type="number" @input="validateInput(item.order, 'qty')" class="form-control form-control-sm" />
+          </td>
+          <td>
+            <template v-if="!modifyingOrders[item.order.norenordno]">
+              {{ item.order.prc }}
+            </template>
+            <input v-else v-model.number="modifiedOrderData[item.order.norenordno].price" type="number" step="0.05" @input="validateInput(item.order, 'prc')" :disabled="modifiedOrderData[item.order.norenordno].orderType === 'MKT'" class="form-control form-control-sm" />
+            <br>
+            <template v-if="!modifyingOrders[item.order.norenordno]">
+              {{ item.order.trgprc || '' }}
+            </template>
+            <input v-else v-model.number="modifiedOrderData[item.order.norenordno].triggerPrice" type="number" step="0.05" @input="handleTriggerPriceChange(item.order)" :disabled="modifiedOrderData[item.order.norenordno].orderType !== 'SL-LMT'" class="form-control form-control-sm" />
+          </td>
+          <td>{{ formatTime(item.order.norentm) }}</td>
+          <td :class="{
+            'text-danger': item.order.status === 'REJECTED',
+            'text-warning': item.order.status === 'PENDING' || item.order.status === 'OPEN'
+          }">
+            {{ item.order.status }}
+            {{ item.order.rejreason }}
+          </td>
+          <td v-if="item.order.status === 'OPEN'" class="text-center">
+            <template v-if="!modifyingOrders[item.order.norenordno]">
+              <button @click="setModifyOrder(item.order.norenordno)" title="Edit" class="btn btn-sm btn-outline-primary">
+                ✏️
+              </button>
+              <button @click="cancelOpenOrder(item.order.norenordno)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
+                🗑️
+              </button>
+            </template>
+            <template v-else>
+              <div class="btn-group btn-group-sm">
+                <button @click="modifyOpenOrder(item.order.norenordno)" :disabled="!isOrderModified(item.order.norenordno) || !isInputValid(item.order.norenordno)" title="Confirm Modification" class="btn btn-sm btn-success">
+                  ✓
+                </button>
+                <button @click="cancelModifyOrder(item.order.norenordno)" title="Cancel Modification" class="btn btn-sm btn-secondary">
+                  ✗
+                </button>
+                <button @click="cancelOpenOrder(item.order.norenordno)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
+                  🗑️
+                </button>
+              </div>
+            </template>
+          </td>
+          <td v-else></td>
+        </tr>
+        <tr v-if="item.trade" class="nested-trade-row">
+          <td title="Trade">✔️ {{ item.trade.trantype }}</td>
+          <td>{{ item.trade.norenordno }} <br> {{ item.trade.tsym }}</td>
+          <td>{{ item.trade.prctyp }}</td>
+          <td>{{ item.trade.qty }}</td>
+          <td>{{ item.trade.flprc }}</td>
+          <td></td>
+          <td>{{ formatTime(item.trade.norentm) }}</td>
+          <td class="text-success">{{ item.trade.stat === 'Ok' ? 'EXECUTED' : item.trade.stat }}</td>
+          <td></td>
+        </tr>
+      </template>
+      <tr v-if="combinedOrdersAndTrades.length === 0">
+        <td colspan="11" class="text-center">No orders or trades on selected broker {{ selectedBroker.brokerName }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
           <p class="text-secondary" v-if="selectedBroker?.brokerName !== 'Dhan'">
             This trades tab fetches orders and trades from selected broker and combines them. Only failed orders are
             shown. If the order is successfully placed, you'll only see the respective trade.
@@ -1483,21 +1469,13 @@ const isExpiryToday = computed(() => {
   return comparableSelectedExpiry === comparableFormattedDate;
 });
 
+const filterStrikesByExpiry = (strikes, expiryDate) => {
+  return strikes.filter(strike => strike.expiryDate === expiryDate);
+};
+
 const updateStrikesForExpiry = (expiryDate) => {
-  // console.log('Updating strikes for expiry:', expiryDate);
-
-  let filteredCallStrikes, filteredPutStrikes;
-
-  if (selectedBroker.value?.brokerName === 'Dhan') {
-    filteredCallStrikes = callStrikes.value.filter(strike => strike.expiryDate === expiryDate);
-    filteredPutStrikes = putStrikes.value.filter(strike => strike.expiryDate === expiryDate);
-  } else if (selectedBroker.value?.brokerName === 'Flattrade') {
-    filteredCallStrikes = callStrikes.value.filter(strike => strike.expiryDate === expiryDate);
-    filteredPutStrikes = putStrikes.value.filter(strike => strike.expiryDate === expiryDate);
-  } else if (selectedBroker.value?.brokerName === 'Shoonya') {
-    filteredCallStrikes = callStrikes.value.filter(strike => strike.expiryDate === expiryDate);
-    filteredPutStrikes = putStrikes.value.filter(strike => strike.expiryDate === expiryDate);
-  }
+  let filteredCallStrikes = filterStrikesByExpiry(callStrikes.value, expiryDate);
+  let filteredPutStrikes = filterStrikesByExpiry(putStrikes.value, expiryDate);
 
   // console.log('Filtered Call Strikes:', filteredCallStrikes);
   // console.log('Filtered Put Strikes:', filteredPutStrikes);
@@ -1843,17 +1821,24 @@ const combinedOrdersAndTrades = computed(() => {
 const formatTime = (timeString) => {
   if (!timeString) return '';
 
-  const [time] = timeString.split(' ');
-  const [hours, minutes, seconds] = time.split(':');
+  let timePart;
 
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    timePart = timeString.split(' ')[1];
+  } else if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+    timePart = timeString.split(' ')[0];
+  } else {
+    return timeString;
+  }
+
+  const [hours, minutes, seconds] = timePart.split(':');
+  
   let formattedHours = parseInt(hours, 10);
   const ampm = formattedHours >= 12 ? 'PM' : 'AM';
   formattedHours = formattedHours % 12 || 12;
 
-  const formattedTime = `${formattedHours}:${minutes}:${seconds} ${ampm}`;
-  return `${formattedTime}`;
+  return `${formattedHours.toString().padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
 };
-
 
 const dhanPositionBook = ref([]);
 const fetchDhanPositions = async () => {
@@ -2182,6 +2167,7 @@ const stopLossLimitPrice = ref(null);
 const triggerPrice = ref(null);
 const modalTransactionType = ref('');
 const modalOptionType = ref('');
+const isOrderModifying = computed(() => (orderId) => !!modifyingOrders[orderId]);
 const isMarketOrder = computed(() => {
   if (selectedBroker.value?.brokerName === 'Dhan') {
     return selectedOrderType.value === 'MARKET';
@@ -2193,7 +2179,97 @@ const isMarketOrder = computed(() => {
 const isMarketAsLimitOrder = computed(() => {
   return selectedOrderType.value === 'MARKET AS LIMIT';
 });
+const modifiedPrice = ref(null);
+const modifiedTriggerPrice = ref(null);
+const modifiedQuantities = ref(null);
+const modifiedOrderType = ref({});  
+const modifyingOrders = reactive({});
+const modifiedOrderData = reactive({});
 
+const isOrderModified = (orderId) => {
+  const originalOrder = selectedBroker.value?.brokerName === 'Dhan' 
+    ? dhanOrders.value.find(order => order.orderId === orderId)
+    : combinedOrdersAndTrades.value.find(item => item.order.norenordno === orderId)?.order;
+
+  if (!originalOrder || !modifiedOrderData[orderId]) return false;
+
+  const modified = modifiedOrderData[orderId];
+
+  return (
+    modified.orderType !== (originalOrder.orderType || originalOrder.prctyp) ||
+    modified.quantity !== Number(originalOrder.quantity || originalOrder.qty) ||
+    modified.price !== Number(originalOrder.price || originalOrder.prc) ||
+    modified.triggerPrice !== Number(originalOrder.triggerPrice || originalOrder.trgprc || 0)
+  );
+};
+
+const setModifyOrder = (orderId) => {
+  const order = selectedBroker.value?.brokerName === 'Dhan' 
+    ? dhanOrders.value.find(order => order.orderId === orderId)
+    : combinedOrdersAndTrades.value.find(item => item.order.norenordno === orderId)?.order;
+
+  if (order) {
+    modifyingOrders[orderId] = true;
+    modifiedOrderData[orderId] = {
+      orderType: order.orderType || order.prctyp,
+      quantity: Number(order.quantity || order.qty),
+      price: Number(order.price || order.prc || 0),
+      triggerPrice: Number(order.triggerPrice || order.trgprc || 0)
+    };
+  }
+};
+
+const cancelModifyOrder = (orderId) => {
+  modifyingOrders[orderId] = false;
+  delete modifiedOrderData[orderId];
+};
+const isInputValid = (orderId) => {
+  if (!modifiedOrderData[orderId]) return false;
+
+  const modified = modifiedOrderData[orderId];
+  const isValidQuantity = Number.isInteger(modified.quantity) && modified.quantity > 0;
+  const isValidPrice = modified.orderType === 'MARKET' || modified.orderType === 'MKT' || 
+    (modified.price > 0 && !isNaN(modified.price));
+  const isValidTriggerPrice = modified.orderType !== 'STOP_LOSS' && modified.orderType !== 'SL-LMT' || 
+    (modified.triggerPrice > 0 && !isNaN(modified.triggerPrice));
+
+  return isValidQuantity && isValidPrice && isValidTriggerPrice;
+};
+const validateInput = (order, field) => {
+  const orderId = order.orderId || order.norenordno;
+  const value = modifiedOrderData[orderId][field];
+
+  if (field === 'quantity' || field === 'qty') {
+    modifiedOrderData[orderId][field] = Math.max(1, Math.floor(value));
+  } else if (field === 'price' || field === 'prc' || field === 'triggerPrice' || field === 'trgprc') {
+    modifiedOrderData[orderId][field] = Math.max(0, parseFloat(value).toFixed(2));
+  }
+};
+const handleOrderTypeChange = (order) => {
+  const orderId = order.orderId || order.norenordno;
+  if (modifiedOrderData[orderId].orderType === 'MARKET' || modifiedOrderData[orderId].orderType === 'MKT') {
+    modifiedOrderData[orderId].price = 0;
+    modifiedOrderData[orderId].triggerPrice = 0;
+  } else if (modifiedOrderData[orderId].orderType === 'LIMIT' || modifiedOrderData[orderId].orderType === 'LMT') {
+    modifiedOrderData[orderId].triggerPrice = 0;
+  } else if (modifiedOrderData[orderId].orderType === 'STOP_LOSS' || modifiedOrderData[orderId].orderType === 'SL-LMT') {
+    if (modifiedOrderData[orderId].triggerPrice === 0) {
+      modifiedOrderData[orderId].triggerPrice = order.triggerPrice || order.trgprc || 0;
+    }
+  }
+};
+const handleTriggerPriceChange = (order) => {
+  const orderId = order.orderId || order.norenordno;
+  const triggerPrice = parseFloat(modifiedOrderData[orderId].triggerPrice);
+  if (!isNaN(triggerPrice)) {
+    const adjustment = Math.ceil(triggerPrice * 0.01);
+    if (order.transactionType === 'BUY' || order.trantype === 'B') {
+      modifiedOrderData[orderId].price = roundToNearestTick(triggerPrice + adjustment).toFixed(2);
+    } else if (order.transactionType === 'SELL' || order.trantype === 'S') {
+      modifiedOrderData[orderId].price = roundToNearestTick(triggerPrice - adjustment).toFixed(2);
+    }
+  }
+};
 
 // Get Exchange Segment for Dhan or Flattrade
 const getExchangeSegment = () => {
@@ -2589,7 +2665,79 @@ const placeOrderForPosition = async (transactionType, optionType, position) => {
     showToast.value = true;
   }
 };
+const modifyOpenOrder = async (orderId) => {
+  try {
+    const order = selectedBroker.value?.brokerName === 'Dhan' 
+      ? dhanOrders.value.find(o => o.orderId === orderId)
+      : combinedOrdersAndTrades.value.find(item => item.order.norenordno === orderId)?.order;
 
+    if (!order) {
+      console.error(`Order with ID ${orderId} not found`);
+      return;
+    }
+
+    const modifiedData = modifiedOrderData[orderId];
+    if (!modifiedData) {
+      console.error(`No modified data found for order ${orderId}`);
+      return;
+    }
+
+    let response;
+    if (selectedBroker.value?.brokerName === 'Dhan') {
+      const dhanDetails = JSON.parse(localStorage.getItem('broker_Dhan') || '{}');
+      console.log(`Sending request to modify Dhan order ${orderId}`);
+      const requestData = {
+        dhanClientId: selectedBroker.value.clientId,
+        orderId: orderId,
+        orderType: modifiedData.orderType,
+        quantity: modifiedData.quantity,
+        price: modifiedData.price,
+        triggerPrice: modifiedData.triggerPrice,
+        validity: "DAY"
+      };
+      console.log("Dhan modify order request data:", JSON.stringify(requestData, null, 2));
+      response = await axios.put('http://localhost:3000/dhanModifyOrder', requestData, {
+        headers: {
+          'order-id': orderId,
+          'dhan_api_token': dhanDetails.apiToken
+        }
+      });
+      console.log("Dhan modify order response:", JSON.stringify(response.data, null, 2));
+      await fetchDhanOrdersTradesBook();
+    } else if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
+      const jKey = localStorage.getItem(`${selectedBroker.value.brokerName.toUpperCase()}_API_TOKEN`);
+      const endpoint = selectedBroker.value?.brokerName === 'Flattrade' ? 'flattradeModifyOrder' : 'shoonyaModifyOrder';
+      console.log(`Sending request to modify ${selectedBroker.value?.brokerName} order ${orderId}`);
+      response = await axios.post(`http://localhost:3000/${endpoint}`, {
+        norenordno: orderId,
+        uid: selectedBroker.value.clientId,
+        exch: order.exch,
+        prc: modifiedData.price,
+        prctyp: modifiedData.orderType,
+        qty: modifiedData.quantity,
+        tsym: order.tsym,
+        ret: "DAY",
+        trgprc: modifiedData.triggerPrice
+      }, {
+        headers: {
+          [`${selectedBroker.value.brokerName.toLowerCase()}_api_token`]: jKey
+        }
+      });
+      await (selectedBroker.value?.brokerName === 'Flattrade' ? fetchFlattradeOrdersTradesBook() : fetchShoonyaOrdersTradesBook());
+    } else {
+      throw new Error("Unsupported broker");
+    }
+    console.log(`Order ${orderId} modified successfully.`);
+    await updateFundLimits();
+    delete modifiedOrderData[orderId];
+    modifyingOrders[orderId] = false;
+  } catch (error) {
+    console.error(`Failed to modify order ${orderId}:`, error);
+    toastMessage.value = 'Failed to modify order';
+    showToast.value = true;
+    throw error;
+  }
+};
 // Close all positions for Dhan, Flattrade, or Shoonya
 const closeAllPositions = async () => {
   try {
@@ -3453,7 +3601,7 @@ const connectWebSocket = () => {
 
   socket.value.onclose = () => {
     console.log('WebSocket disconnected. Attempting to reconnect...');
-    setTimeout(connectWebSocket, 5000);
+    setTimeout(connectWebSocket, 30000);
   };
 };
 const currentSubscriptions = ref({
@@ -3639,68 +3787,49 @@ let positionCheckInterval;
 
 // Lifecycle hooks
 onMounted(async () => {
-  await checkAllTokens();
-  initKillSwitch();
-  const storedBroker = localStorage.getItem('selectedBroker');
-  if (storedBroker) {
-    const brokerDetails = JSON.parse(storedBroker);
-    selectedBroker.value = brokerDetails;
-    selectedBrokerName.value = brokerDetails.brokerName;
+  try {
+    await checkAllTokens();
+    initKillSwitch();
+    const storedBroker = localStorage.getItem('selectedBroker');
+    if (storedBroker) {
+      const brokerDetails = JSON.parse(storedBroker);
+      selectedBroker.value = brokerDetails;
+      selectedBrokerName.value = brokerDetails.brokerName;
+    }
+    await updateExchangeSymbols();
+    setDefaultExchangeAndMasterSymbol();
+    await fetchTradingData();
+    updateAvailableQuantities();
+    loadLots();
+    updateSelectedQuantity();
+    setDefaultExpiry();
+
+    window.addEventListener('keydown', handleHotKeys);
+
+    // Initialize with the default active tab
+    if (activeTab.value === 'positions') {
+      await fetchPositions();
+    } else if (activeTab.value === 'trades') {
+      await fetchTrades();
+    }
+    enableHotKeys.value = localStorage.getItem('EnableHotKeys') !== 'false';
+
+    timer = setInterval(() => {
+      currentTime.value = Date.now();
+    }, 1000);
+
+    connectWebSocket();
+
+    // Load stoploss and target values from localStorage
+    positionStoplosses.value = JSON.parse(localStorage.getItem('positionStoplosses') || '{}');
+    positionTargets.value = JSON.parse(localStorage.getItem('positionTargets') || '{}');
+    positionStoplossesPrice.value = JSON.parse(localStorage.getItem('positionStoplossesPrice') || '{}');
+    positionTargetsPrice.value = JSON.parse(localStorage.getItem('positionTargetsPrice') || '{}');
+    // Start continuous position checking
+    positionCheckInterval = setInterval(continuouslyCheckPositions, 1000); // Check every second
+  } catch (error) {
+    console.error('Error during onMounted:', error);
   }
-  updateExchangeSymbols()
-  setDefaultExchangeAndMasterSymbol()
-  fetchTradingData()
-  updateAvailableQuantities()
-  loadLots();
-  updateSelectedQuantity();
-  setDefaultExpiry()
-
-  window.addEventListener('keydown', handleHotKeys);
-
-  // Initialize with the default active tab
-  if (activeTab.value === 'positions') {
-    if (selectedBroker.value?.brokerName === 'Flattrade') {
-      fetchFlattradePositions();
-      activeFetchFunction.value = 'fetchFlattradePositions';
-    }
-    if (selectedBroker.value?.brokerName === 'Dhan') {
-      fetchDhanPositions();
-      activeFetchFunction.value = 'fetchDhanPositions';
-    }
-    if (selectedBroker.value?.brokerName === 'Shoonya') {
-      fetchShoonyaPositions();
-      activeFetchFunction.value = 'fetchShoonyaPositions';
-    }
-  }
-  if (activeTab.value === 'trades') {
-    if (selectedBroker.value?.brokerName === 'Flattrade') {
-      fetchFlattradeOrdersTradesBook();
-      activeFetchFunction.value = 'fetchFlattradeOrdersTradesBook';
-    }
-    if (selectedBroker.value?.brokerName === 'Dhan') {
-      fetchDhanOrdersTradesBook();
-      activeFetchFunction.value = 'fetchDhanOrdersTradesBook';
-    }
-    if (selectedBroker.value?.brokerName === 'Shoonya') {
-      fetchShoonyaOrdersTradesBook();
-      activeFetchFunction.value = 'fetchShoonyaOrdersTradesBook';
-    }
-  }
-  enableHotKeys.value = localStorage.getItem('EnableHotKeys') !== 'false';
-
-  timer = setInterval(() => {
-    currentTime.value = Date.now();
-  }, 1000);
-
-  connectWebSocket();
-
-  // Load stoploss and target values from localStorage
-  positionStoplosses.value = JSON.parse(localStorage.getItem('positionStoplosses') || '{}');
-  positionTargets.value = JSON.parse(localStorage.getItem('positionTargets') || '{}');
-  positionStoplossesPrice.value = JSON.parse(localStorage.getItem('positionStoplossesPrice') || '{}');
-  positionTargetsPrice.value = JSON.parse(localStorage.getItem('positionTargetsPrice') || '{}');
-  // Start continuous position checking
-  positionCheckInterval = setInterval(continuouslyCheckPositions, 1000); // Check every second
 });
 
 onBeforeUnmount(() => {
@@ -3725,38 +3854,16 @@ watch(selectedBroker, async (newBroker) => {
     previousOrderType.value = orderTypes.value[0];
     selectedProductType.value = getProductTypeValue(productTypes.value[1]); // Default to 'Margin' or 'M'
     await fetchFundLimit();
-    updateExchangeSymbols();
+    await updateExchangeSymbols();
     setDefaultExchangeAndMasterSymbol();
     await fetchTradingData();
     setDefaultExpiry();
 
     // Update the table based on the active tab
     if (activeTab.value === 'positions') {
-      if (newBroker.brokerName === 'Flattrade') {
-        activeFetchFunction.value = 'fetchFlattradePositions';
-        await fetchFlattradePositions();
-      }
-      else if (newBroker.brokerName === 'Shoonya') {
-        activeFetchFunction.value = 'fetchShoonyaPositions';
-        await fetchShoonyaPositions();
-      }
-      else if (newBroker.brokerName === 'Dhan') {
-        activeFetchFunction.value = 'fetchDhanPositions';
-        await fetchDhanPositions();
-      }
+      await fetchPositions();
     } else if (activeTab.value === 'trades') {
-      if (newBroker.brokerName === 'Flattrade') {
-        activeFetchFunction.value = 'fetchFlattradeOrdersTradesBook';
-        await fetchFlattradeOrdersTradesBook();
-      }
-      else if (newBroker.brokerName === 'Shoonya') {
-        activeFetchFunction.value = 'fetchShoonyaOrdersTradesBook';
-        await fetchShoonyaOrdersTradesBook();
-      }
-      else if (newBroker.brokerName === 'Dhan') {
-        activeFetchFunction.value = 'fetchDhanOrdersTradesBook';
-        await fetchDhanOrdersTradesBook();
-      }
+      await fetchTrades();
     }
   }
 });
@@ -3863,34 +3970,40 @@ watch(selectedOrderType, (newValue, oldValue) => {
 
 const activeFetchFunction = ref(null);
 
+const fetchFunctions = {
+  'Flattrade': fetchFlattradePositions,
+  'Dhan': fetchDhanPositions,
+  'Shoonya': fetchShoonyaPositions
+};
+
+const fetchTradesFunctions = {
+  'Flattrade': fetchFlattradeOrdersTradesBook,
+  'Dhan': fetchDhanOrdersTradesBook,
+  'Shoonya': fetchShoonyaOrdersTradesBook
+};
+
+const fetchPositions = async () => {
+  const brokerName = selectedBroker.value?.brokerName;
+  if (brokerName && fetchFunctions[brokerName]) {
+    activeFetchFunction.value = fetchFunctions[brokerName].name;
+    await fetchFunctions[brokerName]();
+  }
+};
+
+const fetchTrades = async () => {
+  const brokerName = selectedBroker.value?.brokerName;
+  if (brokerName && fetchTradesFunctions[brokerName]) {
+    activeFetchFunction.value = fetchTradesFunctions[brokerName].name;
+    await fetchTradesFunctions[brokerName]();
+  }
+};
+
 watch(activeTab, async (newTab) => {
   // Update activeFetchFunction based on the new broker
   if (newTab === 'positions') {
-    if (selectedBroker.value?.brokerName === 'Flattrade') {
-      activeFetchFunction.value = 'fetchFlattradePositions';
-      await fetchFlattradePositions();
-    }
-    else if (selectedBroker.value?.brokerName === 'Shoonya') {
-      activeFetchFunction.value = 'fetchShoonyaPositions';
-      await fetchShoonyaPositions();
-    }
-    else if (selectedBroker.value?.brokerName === 'Dhan') {
-      activeFetchFunction.value = 'fetchDhanPositions';
-      await fetchDhanPositions();
-    }
+    await fetchPositions();
   } else if (newTab === 'trades') {
-    if (selectedBroker.value?.brokerName === 'Flattrade') {
-      activeFetchFunction.value = 'fetchFlattradeOrdersTradesBook';
-      await fetchFlattradeOrdersTradesBook();
-    }
-    else if (selectedBroker.value?.brokerName === 'Shoonya') {
-      activeFetchFunction.value = 'fetchShoonyaOrdersTradesBook';
-      await fetchShoonyaOrdersTradesBook();
-    }
-    else if (selectedBroker.value?.brokerName === 'Dhan') {
-      activeFetchFunction.value = 'fetchDhanOrdersTradesBook';
-      await fetchDhanOrdersTradesBook();
-    }
+    await fetchTrades();
   }
 });
 
