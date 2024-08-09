@@ -15,13 +15,11 @@ const flattradeFundLimits = async () => {
     throw new Error('Token or client ID is missing for Flattrade.')
   }
 
-  const jData = JSON.stringify({ uid: clientId, actid: clientId })
-  const payload = `jKey=${jKey}&jData=${jData}`
-
   try {
-    const res = await axios.post('https://piconnect.flattrade.in/PiConnectTP/Limits', payload, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
+    const res = await axios.post('http://localhost:3000/flattradeFundLimit', null, {
+      params: {
+        FLATTRADE_API_TOKEN: jKey,
+        FLATTRADE_CLIENT_ID: clientId
       }
     })
     return res.data

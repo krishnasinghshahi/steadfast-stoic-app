@@ -11,7 +11,7 @@
           <div class="d-flex align-items-center">
             <select class="form-select" id="ChangeBroker" aria-label="Change Broker" v-model="selectedBrokerName"
               @change="updateSelectedBroker">
-              <option value="" disabled>Select a broker</option>
+              <option value="" disabled selected>Select a broker</option>
               <option v-for="brokerName in availableBrokers" :key="brokerName" :value="brokerName">
                 {{ brokerName }}
               </option>
@@ -76,6 +76,17 @@
 
     </div>
   </section>
+  <!-- <section class="row py-3">
+    <div class="col-12">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="toggleLineChart" v-model="showLineChart">
+        <label class="form-check-label" for="toggleLineChart">
+          Show MTM Chart
+        </label>
+      </div>
+      <LineChart v-if="showLineChart" :profitData="profitData" />
+    </div>
+  </section> -->
 
   <!-- Total Profit & Net PNL -->
   <section class="row py-3">
@@ -798,183 +809,183 @@
         </div>
         <div class="tab-pane fade" id="trades-tab-pane" role="tabpanel" aria-labelledby="trades-tab" tabindex="0">
         <!-- Dhan Trades -->
-<div v-if="activeFetchFunction === 'fetchDhanOrdersTradesBook'">
-  <table class="table table-hover">
-    <thead>
-      <tr>
-        <th>Side</th>
-        <th>Order ID<br>Symbol</th>
-        <th>Order Type</th>
-        <th>Quantity</th>
-        <th>Price & <br> Trigger Price</th>
-        <th>Execution Time</th>
-        <th>Status</th>
-        <th class="text-center">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="dhanOrder in dhanOrders" :key="dhanOrder.orderId">
-        <td>{{ dhanOrder.transactionType }}</td>
-        <td>{{ dhanOrder.orderId }}<br>{{ dhanOrder.tradingSymbol }}</td>
-        <td>
-          <template v-if="!modifyingOrders[dhanOrder.orderId]">
-            {{ dhanOrder.orderType }}
-          </template>
-          <select v-else v-model="modifiedOrderData[dhanOrder.orderId].orderType" @change="handleOrderTypeChange(dhanOrder)" class="form-select form-select-sm">
-            <option value="MARKET">Market</option>
-            <option value="LIMIT">Limit</option>
-            <option value="STOP_LOSS">Stop Loss</option>
-          </select>
-        </td>
-        <td>
-          <template v-if="!modifyingOrders[dhanOrder.orderId]">
-            {{ dhanOrder.quantity }}
-          </template>
-          <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].quantity" type="number" @input="validateInput(dhanOrder, 'quantity')" class="form-control form-control-sm" />
-        </td>
-        <td>
-          <template v-if="!modifyingOrders[dhanOrder.orderId]">
-            {{ dhanOrder.price }}
-          </template>
-          <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].price" type="number" step="0.05" @input="validateInput(dhanOrder, 'price')" :disabled="modifiedOrderData[dhanOrder.orderId].orderType === 'MARKET'" class="form-control form-control-sm" />
-        <br>
-          <template v-if="!modifyingOrders[dhanOrder.orderId]">
-            {{ dhanOrder.triggerPrice === 0 ? '' : dhanOrder.triggerPrice }}
-          </template>
-          <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].triggerPrice" type="number" step="0.05" @input="handleTriggerPriceChange(dhanOrder)" :disabled="modifiedOrderData[dhanOrder.orderId].orderType !== 'STOP_LOSS'" class="form-control form-control-sm" />
-        </td>
-        <td>{{ formatTime(dhanOrder.createTime) }}</td>
-        <td>{{ dhanOrder.orderStatus }}</td>
-        <td v-if="dhanOrder.orderStatus === 'PENDING'" class="text-center">
-          <template v-if="!modifyingOrders[dhanOrder.orderId]">
-            <button @click="setModifyOrder(dhanOrder.orderId)" title="Edit" class="btn btn-sm btn-outline-primary">
-              ✏️
-            </button>
-            <button @click="cancelOpenOrder(dhanOrder.orderId)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
-              🗑️
-            </button>
-          </template>
-          <template v-else>
-            <div class="btn-group btn-group-sm">
-              <button @click="modifyOpenOrder(dhanOrder.orderId)" :disabled="!isOrderModified(dhanOrder.orderId) || !isInputValid(dhanOrder.orderId)" title="Confirm Modification" class="btn btn-sm btn-success">
-                ✓
-              </button>
-              <button @click="cancelModifyOrder(dhanOrder.orderId)" title="Cancel Modification" class="btn btn-sm btn-secondary">
-                ✗
-              </button>
-              <button @click="cancelOpenOrder(dhanOrder.orderId)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
-                🗑️
-              </button>
-            </div>
-          </template>
-        </td>
-        <td v-else></td>
-      </tr>
-      <tr v-if="dhanOrders.length === 0">
-        <td colspan="10" class="text-center">No orders or trades on selected broker {{ selectedBroker.brokerName }}</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- Flattrade and Shoonya Trades -->
-<div v-if="activeFetchFunction === 'fetchFlattradeOrdersTradesBook' || activeFetchFunction === 'fetchShoonyaOrdersTradesBook'">
-  <table class="table table-hover">
-    <thead>
-      <tr>
-        <th>Side</th>
-        <th>Order ID & <br> Symbol</th>
-        <th>Order Type</th>
-        <th>Quantity</th>
-        <th>Price & Trigger Price</th>
-        <th>Time</th>
-        <th>Status & Reason</th>
-        <th class="text-center">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <template v-for="item in combinedOrdersAndTrades" :key="item.order.norenordno">
-        <tr v-if="item.order.status !== 'COMPLETE'">
-          <td title="Order">🛒 {{ item.order.trantype }}</td>
-          <td>{{ item.order.norenordno }} <br> {{ item.order.tsym }}</td>
-          <td>
-            <template v-if="!modifyingOrders[item.order.norenordno]">
-              {{ item.order.prctyp }}
-            </template>
-            <select v-else v-model="modifiedOrderData[item.order.norenordno].orderType" @change="handleOrderTypeChange(item.order)" class="form-select form-select-sm">
-              <option value="MKT">Market</option>
-              <option value="LMT">Limit</option>
-              <option value="SL-LMT">Stop Loss</option>
-            </select>
-          </td>
-          <td>
-            <template v-if="!modifyingOrders[item.order.norenordno]">
-              {{ item.order.qty }}
-            </template>
-            <input v-else v-model.number="modifiedOrderData[item.order.norenordno].quantity" type="number" @input="validateInput(item.order, 'qty')" class="form-control form-control-sm" />
-          </td>
-          <td>
-            <template v-if="!modifyingOrders[item.order.norenordno]">
-              {{ item.order.prc }}
-            </template>
-            <input v-else v-model.number="modifiedOrderData[item.order.norenordno].price" type="number" step="0.05" @input="validateInput(item.order, 'prc')" :disabled="modifiedOrderData[item.order.norenordno].orderType === 'MKT'" class="form-control form-control-sm" />
-            <br>
-            <template v-if="!modifyingOrders[item.order.norenordno]">
-              {{ item.order.trgprc || '' }}
-            </template>
-            <input v-else v-model.number="modifiedOrderData[item.order.norenordno].triggerPrice" type="number" step="0.05" @input="handleTriggerPriceChange(item.order)" :disabled="modifiedOrderData[item.order.norenordno].orderType !== 'SL-LMT'" class="form-control form-control-sm" />
-          </td>
-          <td>{{ formatTime(item.order.norentm) }}</td>
-          <td :class="{
-            'text-danger': item.order.status === 'REJECTED',
-            'text-warning': item.order.status === 'PENDING' || item.order.status === 'OPEN'
-          }">
-            {{ item.order.status }}
-            {{ item.order.rejreason }}
-          </td>
-          <td v-if="item.order.status === 'OPEN'" class="text-center">
-            <template v-if="!modifyingOrders[item.order.norenordno]">
-              <button @click="setModifyOrder(item.order.norenordno)" title="Edit" class="btn btn-sm btn-outline-primary">
-                ✏️
-              </button>
-              <button @click="cancelOpenOrder(item.order.norenordno)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
-                🗑️
-              </button>
-            </template>
-            <template v-else>
-              <div class="btn-group btn-group-sm">
-                <button @click="modifyOpenOrder(item.order.norenordno)" :disabled="!isOrderModified(item.order.norenordno) || !isInputValid(item.order.norenordno)" title="Confirm Modification" class="btn btn-sm btn-success">
-                  ✓
-                </button>
-                <button @click="cancelModifyOrder(item.order.norenordno)" title="Cancel Modification" class="btn btn-sm btn-secondary">
-                  ✗
-                </button>
-                <button @click="cancelOpenOrder(item.order.norenordno)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
-                  🗑️
-                </button>
-              </div>
-            </template>
-          </td>
-          <td v-else></td>
-        </tr>
-        <tr v-if="item.trade" class="nested-trade-row">
-          <td title="Trade">✔️ {{ item.trade.trantype }}</td>
-          <td>{{ item.trade.norenordno }} <br> {{ item.trade.tsym }}</td>
-          <td>{{ item.trade.prctyp }}</td>
-          <td>{{ item.trade.qty }}</td>
-          <td>{{ item.trade.flprc }}</td>
-          <td></td>
-          <td>{{ formatTime(item.trade.norentm) }}</td>
-          <td class="text-success">{{ item.trade.stat === 'Ok' ? 'EXECUTED' : item.trade.stat }}</td>
-          <td></td>
-        </tr>
-      </template>
-      <tr v-if="combinedOrdersAndTrades.length === 0">
-        <td colspan="11" class="text-center">No orders or trades on selected broker {{ selectedBroker.brokerName }}</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+        <div v-if="activeFetchFunction === 'fetchDhanOrdersTradesBook'">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Side</th>
+                <th>Order ID<br>Symbol</th>
+                <th>Order Type</th>
+                <th>Quantity</th>
+                <th>Price & <br> Trigger Price</th>
+                <th>Execution Time</th>
+                <th>Status</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="dhanOrder in dhanOrders" :key="dhanOrder.orderId">
+                <td>{{ dhanOrder.transactionType }}</td>
+                <td>{{ dhanOrder.orderId }}<br>{{ dhanOrder.tradingSymbol }}</td>
+                <td>
+                  <template v-if="!modifyingOrders[dhanOrder.orderId]">
+                    {{ dhanOrder.orderType }}
+                  </template>
+                  <select v-else v-model="modifiedOrderData[dhanOrder.orderId].orderType" @change="handleOrderTypeChange(dhanOrder)" class="form-select form-select-sm">
+                    <option value="MARKET">Market</option>
+                    <option value="LIMIT">Limit</option>
+                    <option value="STOP_LOSS">Stop Loss</option>
+                  </select>
+                </td>
+                <td>
+                  <template v-if="!modifyingOrders[dhanOrder.orderId]">
+                    {{ dhanOrder.quantity }}
+                  </template>
+                  <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].quantity" type="number" @input="validateInput(dhanOrder, 'quantity')" class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <template v-if="!modifyingOrders[dhanOrder.orderId]">
+                    {{ dhanOrder.price }}
+                  </template>
+                  <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].price" type="number" step="0.05" @input="validateInput(dhanOrder, 'price')" :disabled="modifiedOrderData[dhanOrder.orderId].orderType === 'MARKET'" class="form-control form-control-sm" />
+                <br>
+                  <template v-if="!modifyingOrders[dhanOrder.orderId]">
+                    {{ dhanOrder.triggerPrice === 0 ? '' : dhanOrder.triggerPrice }}
+                  </template>
+                  <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].triggerPrice" type="number" step="0.05" @input="handleTriggerPriceChange(dhanOrder)" :disabled="modifiedOrderData[dhanOrder.orderId].orderType !== 'STOP_LOSS'" class="form-control form-control-sm" />
+                </td>
+                <td>{{ formatTime(dhanOrder.createTime) }}</td>
+                <td>{{ dhanOrder.orderStatus }}</td>
+                <td v-if="dhanOrder.orderStatus === 'PENDING'" class="text-center">
+                  <template v-if="!modifyingOrders[dhanOrder.orderId]">
+                    <button @click="setModifyOrder(dhanOrder.orderId)" title="Edit" class="btn btn-sm btn-outline-primary">
+                      ✏️
+                    </button>
+                    <button @click="cancelOpenOrder(dhanOrder.orderId)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
+                      🗑️
+                    </button>
+                  </template>
+                  <template v-else>
+                    <div class="btn-group btn-group-sm">
+                      <button @click="modifyOpenOrder(dhanOrder.orderId)" :disabled="!isOrderModified(dhanOrder.orderId) || !isInputValid(dhanOrder.orderId)" title="Confirm Modification" class="btn btn-sm btn-success">
+                        ✓
+                      </button>
+                      <button @click="cancelModifyOrder(dhanOrder.orderId)" title="Cancel Modification" class="btn btn-sm btn-secondary">
+                        ✗
+                      </button>
+                      <button @click="cancelOpenOrder(dhanOrder.orderId)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
+                        🗑️
+                      </button>
+                    </div>
+                  </template>
+                </td>
+                <td v-else></td>
+              </tr>
+              <tr v-if="dhanOrders.length === 0">
+                <td colspan="10" class="text-center">No orders or trades on selected broker {{ selectedBroker.brokerName }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Flattrade and Shoonya Trades -->
+        <div v-if="activeFetchFunction === 'fetchFlattradeOrdersTradesBook' || activeFetchFunction === 'fetchShoonyaOrdersTradesBook'">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Side</th>
+                <th>Order ID & <br> Symbol</th>
+                <th>Order Type</th>
+                <th>Quantity</th>
+                <th>Price & Trigger Price</th>
+                <th>Time</th>
+                <th>Status & Reason</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-for="item in combinedOrdersAndTrades" :key="item.order.norenordno">
+                <tr v-if="item.order.status !== 'COMPLETE'">
+                  <td title="Order">🛒 {{ item.order.trantype }}</td>
+                  <td>{{ item.order.norenordno }} <br> {{ item.order.tsym }}</td>
+                  <td>
+                    <template v-if="!modifyingOrders[item.order.norenordno]">
+                      {{ item.order.prctyp }}
+                    </template>
+                    <select v-else v-model="modifiedOrderData[item.order.norenordno].orderType" @change="handleOrderTypeChange(item.order)" class="form-select form-select-sm">
+                      <option value="MKT">Market</option>
+                      <option value="LMT">Limit</option>
+                      <option value="SL-LMT">Stop Loss</option>
+                    </select>
+                  </td>
+                  <td>
+                    <template v-if="!modifyingOrders[item.order.norenordno]">
+                      {{ item.order.qty }}
+                    </template>
+                    <input v-else v-model.number="modifiedOrderData[item.order.norenordno].quantity" type="number" @input="validateInput(item.order, 'qty')" class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <template v-if="!modifyingOrders[item.order.norenordno]">
+                      {{ item.order.prc }}
+                    </template>
+                    <input v-else v-model.number="modifiedOrderData[item.order.norenordno].price" type="number" step="0.05" @input="validateInput(item.order, 'prc')" :disabled="modifiedOrderData[item.order.norenordno].orderType === 'MKT'" class="form-control form-control-sm" />
+                    <br>
+                    <template v-if="!modifyingOrders[item.order.norenordno]">
+                      {{ item.order.trgprc || '' }}
+                    </template>
+                    <input v-else v-model.number="modifiedOrderData[item.order.norenordno].triggerPrice" type="number" step="0.05" @input="handleTriggerPriceChange(item.order)" :disabled="modifiedOrderData[item.order.norenordno].orderType !== 'SL-LMT'" class="form-control form-control-sm" />
+                  </td>
+                  <td>{{ formatTime(item.order.norentm) }}</td>
+                  <td :class="{
+                    'text-danger': item.order.status === 'REJECTED',
+                    'text-warning': item.order.status === 'PENDING' || item.order.status === 'OPEN'
+                  }">
+                    {{ item.order.status }}
+                    {{ item.order.rejreason }}
+                  </td>
+                  <td v-if="item.order.status === 'OPEN'" class="text-center">
+                    <template v-if="!modifyingOrders[item.order.norenordno]">
+                      <button @click="setModifyOrder(item.order.norenordno)" title="Edit" class="btn btn-sm btn-outline-primary">
+                        ✏️
+                      </button>
+                      <button @click="cancelOpenOrder(item.order.norenordno)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
+                        🗑️
+                      </button>
+                    </template>
+                    <template v-else>
+                      <div class="btn-group btn-group-sm">
+                        <button @click="modifyOpenOrder(item.order.norenordno)" :disabled="!isOrderModified(item.order.norenordno) || !isInputValid(item.order.norenordno)" title="Confirm Modification" class="btn btn-sm btn-success">
+                          ✓
+                        </button>
+                        <button @click="cancelModifyOrder(item.order.norenordno)" title="Cancel Modification" class="btn btn-sm btn-secondary">
+                          ✗
+                        </button>
+                        <button @click="cancelOpenOrder(item.order.norenordno)" title="Cancel Order" class="btn btn-sm btn-outline-danger">
+                          🗑️
+                        </button>
+                      </div>
+                    </template>
+                  </td>
+                  <td v-else></td>
+                </tr>
+                <tr v-if="item.trade" class="nested-trade-row">
+                  <td title="Trade">✔️ {{ item.trade.trantype }}</td>
+                  <td>{{ item.trade.norenordno }} <br> {{ item.trade.tsym }}</td>
+                  <td>{{ item.trade.prctyp }}</td>
+                  <td>{{ item.trade.qty }}</td>
+                  <td>{{ item.trade.flprc }}</td>
+                  <td></td>
+                  <td>{{ formatTime(item.trade.norentm) }}</td>
+                  <td class="text-success">{{ item.trade.stat === 'Ok' ? 'EXECUTED' : item.trade.stat }}</td>
+                  <td></td>
+                </tr>
+              </template>
+              <tr v-if="combinedOrdersAndTrades.length === 0">
+                <td colspan="11" class="text-center">No orders or trades on selected broker {{ selectedBroker.brokerName }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
           <p class="text-secondary" v-if="selectedBroker?.brokerName !== 'Dhan'">
             This trades tab fetches orders and trades from selected broker and combines them. Only failed orders are
             shown. If the order is successfully placed, you'll only see the respective trade.
