@@ -31,3 +31,4 @@ coverage
 
 .env
 *.csv#
+package-lock.json

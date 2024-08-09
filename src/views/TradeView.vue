@@ -345,16 +345,16 @@
 
           <!-- Live Underlying Price -->
           <div class="col-6 text-center">
-            <p class="mb-0" v-if="selectedMasterSymbol === 'NIFTY'">Nifty 50: <b>{{ niftyPrice }}</b></p>
-            <p class="mb-0" v-if="selectedMasterSymbol === 'BANKNIFTY'">Bank Nifty: <b>{{ bankNiftyPrice }}</b></p>
-            <p class="mb-0" v-if="selectedMasterSymbol === 'FINNIFTY'">Fin Nifty: <b>{{ finniftyPrice }}</b></p>
-            <p class="mb-0" v-if="selectedMasterSymbol === 'NIFTYNXT50'">Nifty Next 50: <b>{{ niftynxt50Price }}</b></p>
-            <p class="mb-0" v-if="selectedMasterSymbol === 'MIDCPNIFTY'">Nifty Mid Select: <b>{{ midcpniftyPrice }}</b>
+            <p class="mb-0" v-if="selectedMasterSymbol === 'NIFTY'">Nifty 50: <b>{{ niftyPrice }} ( {{ niftyPriceChange }})%</b></p>
+            <p class="mb-0" v-if="selectedMasterSymbol === 'BANKNIFTY'">Bank Nifty: <b>{{ bankNiftyPrice }} ({{ bankNiftyPriceChange }})%</b></p>
+            <p class="mb-0" v-if="selectedMasterSymbol === 'FINNIFTY'">Fin Nifty: <b>{{ finniftyPrice }} ({{ finniftyPriceChange }})%</b></p>
+            <p class="mb-0" v-if="selectedMasterSymbol === 'NIFTYNXT50'">Nifty Next 50: <b>{{ niftynxt50Price }} ({{ niftynxt50PriceChange }})%</b></p>
+            <p class="mb-0" v-if="selectedMasterSymbol === 'MIDCPNIFTY'">Nifty Mid Select: <b>{{ midcpniftyPrice }} ({{ midcpniftyPriceChange }})%</b>
             </p>
-            <p class="mb-0" v-if="selectedMasterSymbol === 'SENSEX'">Sensex: <b>{{ sensexPrice }}</b></p>
-            <p class="mb-0" v-if="selectedMasterSymbol === 'BANKEX'">Bankex: <b>{{ bankexPrice }}</b></p>
-            <p class="mb-0" v-if="selectedMasterSymbol === 'SENSEX50'">Sensex 50: <b>{{ sensex50Price }}</b></p>
-          </div>
+            <p class="mb-0" v-if="selectedMasterSymbol === 'SENSEX'">Sensex: <b>{{ sensexPrice }} ({{ sensexPriceChange }})%</b></p>
+            <p class="mb-0" v-if="selectedMasterSymbol === 'BANKEX'">Bankex: <b>{{ bankexPrice }} ({{ bankexPriceChange }})%</b></p>
+            <p class="mb-0" v-if="selectedMasterSymbol === 'SENSEX50'">Sensex 50: <b>{{ sensex50Price }} ({{ sensex50PriceChange }})%</b></p>
+          </div>%
 
           <!-- Put Strike Selection -->
           <div class="col-3">
@@ -887,7 +887,7 @@
             </tbody>
           </table>
         </div>
-        
+
         <!-- Flattrade and Shoonya Trades -->
         <div v-if="activeFetchFunction === 'fetchFlattradeOrdersTradesBook' || activeFetchFunction === 'fetchShoonyaOrdersTradesBook'">
           <table class="table table-hover">
@@ -1395,6 +1395,14 @@ const midcpniftyPrice = ref('N/A');
 const sensexPrice = ref('N/A');
 const bankexPrice = ref('N/A');
 const sensex50Price = ref('N/A');
+const niftyPriceChange = ref('N/A');
+const bankNiftyPriceChange = ref('N/A');
+const finniftyPriceChange = ref('N/A');
+const niftynxt50PriceChange = ref('N/A');
+const midcpniftyPriceChange = ref('N/A');
+const sensexPriceChange = ref('N/A');
+const bankexPriceChange = ref('N/A');
+const sensex50PriceChange = ref('N/A');
 // Add a new function to get the initial price
 const getInitialPrice = (symbol) => {
   const strike = callStrikes.value.find(s =>
@@ -3573,14 +3581,14 @@ const connectWebSocket = () => {
         if (quoteData.tk === exchangeSecurityId) {
           // Update the price for the selected master symbol
           switch (selectedMasterSymbol.value) {
-            case 'NIFTY': niftyPrice.value = quoteData.lp; break;
-            case 'BANKNIFTY': bankNiftyPrice.value = quoteData.lp; break;
-            case 'FINNIFTY': finniftyPrice.value = quoteData.lp; break;
-            case 'NIFTYNXT50': niftynxt50Price.value = quoteData.lp; break;
-            case 'MIDCPNIFTY': midcpniftyPrice.value = quoteData.lp; break;
-            case 'SENSEX': sensexPrice.value = quoteData.lp; break;
-            case 'BANKEX': bankexPrice.value = quoteData.lp; break;
-            case 'SENSEX50': sensex50Price.value = quoteData.lp; break;
+            case 'NIFTY': niftyPrice.value = quoteData.lp; niftyPriceChange.value = quoteData.pc; break;
+            case 'BANKNIFTY': bankNiftyPrice.value = quoteData.lp; bankNiftyPriceChange.value = quoteData.pc; break;
+            case 'FINNIFTY': finniftyPrice.value = quoteData.lp; finniftyPriceChange.value = quoteData.pc; break;
+            case 'NIFTYNXT50': niftynxt50Price.value = quoteData.lp; niftynxt50PriceChange.value = quoteData.pc; break;
+            case 'MIDCPNIFTY': midcpniftyPrice.value = quoteData.lp; midcpniftyPriceChange.value = quoteData.pc; break;
+            case 'SENSEX': sensexPrice.value = quoteData.lp; sensexPriceChange.value = quoteData.pc; break;
+            case 'BANKEX': bankexPrice.value = quoteData.lp; bankexPriceChange.value = quoteData.pc; break;
+            case 'SENSEX50': sensex50Price.value = quoteData.lp; sensex50PriceChange.value = quoteData.pc; break;
           }
         }
       }
