@@ -354,7 +354,7 @@
             <p class="mb-0" v-if="selectedMasterSymbol === 'SENSEX'">Sensex: <b>{{ sensexPrice }} ({{ sensexPriceChange }})%</b></p>
             <p class="mb-0" v-if="selectedMasterSymbol === 'BANKEX'">Bankex: <b>{{ bankexPrice }} ({{ bankexPriceChange }})%</b></p>
             <p class="mb-0" v-if="selectedMasterSymbol === 'SENSEX50'">Sensex 50: <b>{{ sensex50Price }} ({{ sensex50PriceChange }})%</b></p>
-          </div>%
+          </div>
 
           <!-- Put Strike Selection -->
           <div class="col-3">
@@ -818,20 +818,20 @@
                 <th>Order Type</th>
                 <th>Quantity</th>
                 <th>Price & <br> Trigger Price</th>
-                <th>Execution Time</th>
-                <th>Status</th>
+                <th>Time</th>
+                <th>Status & Reason</th>
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="dhanOrder in dhanOrders" :key="dhanOrder.orderId">
-                <td>{{ dhanOrder.transactionType }}</td>
-                <td>{{ dhanOrder.orderId }}<br>{{ dhanOrder.tradingSymbol }}</td>
+                <td title="Order">🛒 {{ dhanOrder.transactionType }}</td>
+                <td>{{ dhanOrder.orderId }} <br> {{ dhanOrder.tradingSymbol }}</td>
                 <td>
                   <template v-if="!modifyingOrders[dhanOrder.orderId]">
                     {{ dhanOrder.orderType }}
                   </template>
-                  <select v-else v-model="modifiedOrderData[dhanOrder.orderId].orderType" @change="handleOrderTypeChange(dhanOrder)" class="form-select form-select-sm">
+                  <select v-else v-model="modifiedOrderData[dhanOrder.orderId].modifiedOrderType" @change="handleOrderTypeChange(dhanOrder)" class="form-select form-select-sm" autocomplete="off">
                     <option value="MARKET">Market</option>
                     <option value="LIMIT">Limit</option>
                     <option value="STOP_LOSS">Stop Loss</option>
@@ -841,22 +841,32 @@
                   <template v-if="!modifyingOrders[dhanOrder.orderId]">
                     {{ dhanOrder.quantity }}
                   </template>
-                  <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].quantity" type="number" @input="validateInput(dhanOrder, 'quantity')" class="form-control form-control-sm" />
+                  <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].modifiedQuantity" type="number" @input="validateInput(dhanOrder, 'modifiedQuantity')" class="form-control form-control-sm" autocomplete="off"/>
                 </td>
                 <td>
                   <template v-if="!modifyingOrders[dhanOrder.orderId]">
                     {{ dhanOrder.price }}
                   </template>
-                  <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].price" type="number" step="0.05" @input="validateInput(dhanOrder, 'price')" :disabled="modifiedOrderData[dhanOrder.orderId].orderType === 'MARKET'" class="form-control form-control-sm" />
-                <br>
+                  <template v-else>
+                    <input v-model.number="modifiedOrderData[dhanOrder.orderId].modifiedPrice" type="number" step="0.05" @input="validateInput(dhanOrder, 'modifiedPrice')" :disabled="modifiedOrderData[dhanOrder.orderId].modifiedOrderType === 'MARKET'" class="form-control form-control-sm" autocomplete="off"/>
+                  </template>
+                  <br>
                   <template v-if="!modifyingOrders[dhanOrder.orderId]">
                     {{ dhanOrder.triggerPrice === 0 ? '' : dhanOrder.triggerPrice }}
                   </template>
-                  <input v-else v-model.number="modifiedOrderData[dhanOrder.orderId].triggerPrice" type="number" step="0.05" @input="handleTriggerPriceChange(dhanOrder)" :disabled="modifiedOrderData[dhanOrder.orderId].orderType !== 'STOP_LOSS'" class="form-control form-control-sm" />
+                  <template v-else-if="modifyingOrders[dhanOrder.orderId] && modifiedOrderData[dhanOrder.orderId].modifiedOrderType === 'STOP_LOSS'">
+                    <input v-model.number="modifiedOrderData[dhanOrder.orderId].modifiedTriggerPrice" type="number" step="0.05" @input="validateInput(dhanOrder, 'modifiedTriggerPrice')" placeholder="Trigger Price" class="form-control form-control-sm mt-1" autocomplete="off"/>
+                  </template>
                 </td>
                 <td>{{ formatTime(dhanOrder.createTime) }}</td>
-                <td>{{ dhanOrder.orderStatus }}</td>
-                <td v-if="dhanOrder.orderStatus === 'PENDING'" class="text-center">
+                <td :class="{
+                  'text-danger': dhanOrder.orderStatus === 'REJECTED',
+                  'text-warning': dhanOrder.orderStatus === 'PENDING' || dhanOrder.orderStatus === 'OPEN'
+                }">
+                  {{ dhanOrder.orderStatus }}
+                  {{ dhanOrder.omsErrorDescription || '' }}
+                </td>
+                <td v-if="dhanOrder.orderStatus === 'OPEN' || dhanOrder.orderStatus === 'PENDING'" class="text-center">
                   <template v-if="!modifyingOrders[dhanOrder.orderId]">
                     <button @click="setModifyOrder(dhanOrder.orderId)" title="Edit" class="btn btn-sm btn-outline-primary">
                       ✏️
@@ -882,7 +892,7 @@
                 <td v-else></td>
               </tr>
               <tr v-if="dhanOrders.length === 0">
-                <td colspan="10" class="text-center">No orders or trades on selected broker {{ selectedBroker.brokerName }}</td>
+                <td colspan="8" class="text-center">No orders or trades on Dhan</td>
               </tr>
             </tbody>
           </table>
@@ -897,7 +907,7 @@
                 <th>Order ID & <br> Symbol</th>
                 <th>Order Type</th>
                 <th>Quantity</th>
-                <th>Price & Trigger Price</th>
+                <th>Price & <br> Trigger Price</th>
                 <th>Time</th>
                 <th>Status & Reason</th>
                 <th class="text-center">Actions</th>
@@ -912,38 +922,46 @@
                     <template v-if="!modifyingOrders[item.order.norenordno]">
                       {{ item.order.prctyp }}
                     </template>
-                    <select v-else v-model="modifiedOrderData[item.order.norenordno].orderType" @change="handleOrderTypeChange(item.order)" class="form-select form-select-sm">
+                    <template v-else>
+                    <select v-model="modifiedOrderData[item.order.norenordno].modifiedOrderType" @change="handleOrderTypeChange(item)" class="form-select form-select-sm" autocomplete="off">
                       <option value="MKT">Market</option>
                       <option value="LMT">Limit</option>
                       <option value="SL-LMT">Stop Loss</option>
                     </select>
+                    </template>
                   </td>
                   <td>
                     <template v-if="!modifyingOrders[item.order.norenordno]">
                       {{ item.order.qty }}
                     </template>
-                    <input v-else v-model.number="modifiedOrderData[item.order.norenordno].quantity" type="number" @input="validateInput(item.order, 'qty')" class="form-control form-control-sm" />
+                    <template v-else>
+                    <input v-model.number="modifiedOrderData[item.order.norenordno].modifiedQuantity" type="number" @input="validateInput(item, 'modifiedQuantity')" class="form-control form-control-sm" autocomplete="off" />
+                    </template>
                   </td>
                   <td>
                     <template v-if="!modifyingOrders[item.order.norenordno]">
                       {{ item.order.prc }}
                     </template>
-                    <input v-else v-model.number="modifiedOrderData[item.order.norenordno].price" type="number" step="0.05" @input="validateInput(item.order, 'prc')" :disabled="modifiedOrderData[item.order.norenordno].orderType === 'MKT'" class="form-control form-control-sm" />
+                    <template v-else>
+                    <input v-model.number="modifiedOrderData[item.order.norenordno].modifiedPrice" type="number" step="0.05" @input="validateInput(item, 'modifiedPrice')" :disabled="modifiedOrderData[item.order.norenordno].modifiedOrderType === 'MKT'" class="form-control form-control-sm" autocomplete="off" />
+                    </template>
                     <br>
                     <template v-if="!modifyingOrders[item.order.norenordno]">
                       {{ item.order.trgprc || '' }}
                     </template>
-                    <input v-else v-model.number="modifiedOrderData[item.order.norenordno].triggerPrice" type="number" step="0.05" @input="handleTriggerPriceChange(item.order)" :disabled="modifiedOrderData[item.order.norenordno].orderType !== 'SL-LMT'" class="form-control form-control-sm" />
+                    <template v-else>
+                    <input v-model.number="modifiedOrderData[item.order.norenordno].modifiedTriggerPrice" type="number" step="0.05" @input="handleTriggerPriceChange(item)" :disabled="modifiedOrderData[item.order.norenordno].modifiedOrderType !== 'SL-LMT'" class="form-control form-control-sm" autocomplete="off" />
+                    </template>
                   </td>
                   <td>{{ formatTime(item.order.norentm) }}</td>
                   <td :class="{
                     'text-danger': item.order.status === 'REJECTED',
-                    'text-warning': item.order.status === 'PENDING' || item.order.status === 'OPEN'
+                    'text-warning': item.order.status === 'PENDING' || item.order.status === 'OPEN' || item.order.status === 'TRIGGER_PENDING'
                   }">
                     {{ item.order.status }}
-                    {{ item.order.rejreason }}
+                    {{ item.order.rejreason || '' }}
                   </td>
-                  <td v-if="item.order.status === 'OPEN'" class="text-center">
+                  <td v-if="item.order.status === 'OPEN' || item.order.status === 'PENDING' || item.order.status === 'TRIGGER_PENDING'" class="text-center">
                     <template v-if="!modifyingOrders[item.order.norenordno]">
                       <button @click="setModifyOrder(item.order.norenordno)" title="Edit" class="btn btn-sm btn-outline-primary">
                         ✏️
@@ -974,21 +992,23 @@
                   <td>{{ item.trade.prctyp }}</td>
                   <td>{{ item.trade.qty }}</td>
                   <td>{{ item.trade.flprc }}</td>
-                  <td></td>
                   <td>{{ formatTime(item.trade.norentm) }}</td>
                   <td class="text-success">{{ item.trade.stat === 'Ok' ? 'EXECUTED' : item.trade.stat }}</td>
                   <td></td>
                 </tr>
               </template>
               <tr v-if="combinedOrdersAndTrades.length === 0">
-                <td colspan="11" class="text-center">No orders or trades on selected broker {{ selectedBroker.brokerName }}</td>
+                <td colspan="8" class="text-center">No orders or trades on selected broker {{ selectedBroker.brokerName }}</td>
               </tr>
             </tbody>
           </table>
         </div>
+        <!-- Trades Tab Descriptions -->
           <p class="text-secondary" v-if="selectedBroker?.brokerName !== 'Dhan'">
-            This trades tab fetches orders and trades from selected broker and combines them. Only failed orders are
-            shown. If the order is successfully placed, you'll only see the respective trade.
+            This trades tab fetches orders and trades from selected broker and combines them.
+          </p>
+          <p class="text-secondary" v-if="selectedBroker?.brokerName === 'Dhan'">
+            This trades tab fetches orders from selected broker.
           </p>
         </div>
         <div class="tab-pane fade" id="automation-tab-pane" role="tabpanel" aria-labelledby="automation-tab"
@@ -1134,6 +1154,11 @@ const toastMessage = ref('');
 const updateToastVisibility = (value) => {
   showToast.value = value;
 };
+const showToastMessage = (message) => {
+  toastMessage.value = message;
+  showToast.value = true;
+};
+
 const brokerStatus = computed(() => {
   const dhanDetails = JSON.parse(localStorage.getItem('broker_Dhan') || '{}');
   const flattradeDetails = JSON.parse(localStorage.getItem('broker_Flattrade') || '{}');
@@ -1214,28 +1239,25 @@ const toggleKillSwitch = async () => {
 
   if (newStatus === 'DEACTIVATED' && remainingTimeInMs.value > 0) {
     cycleClockEmoji();
-    toastMessage.value = 'Kill Switch cannot be deactivated within 6 hours of activation';
-    showToast.value = true;
+    showToastMessage('Kill Switch cannot be deactivated within 6 hours of activation');
     return;
   }
 
   // Handle different response messages
   if (newStatus === 'ACTIVATED') {
-    toastMessage.value = 'Kill Switch activated successfully';
+    showToastMessage('Kill Switch activated successfully');
     killSwitchActive.value = true;
     localStorage.setItem('KillSwitchStatus', 'true');
     activationTime.value = Date.now();
     localStorage.setItem('KillSwitchActivationTime', activationTime.value.toString());
     enableHotKeys.value = false;
   } else {
-    toastMessage.value = 'Kill Switch deactivated successfully';
+    showToastMessage('Kill Switch deactivated successfully');
     killSwitchActive.value = false;
     localStorage.removeItem('KillSwitchStatus');
     activationTime.value = 0;
     localStorage.removeItem('KillSwitchActivationTime');
   }
-
-  showToast.value = true;
 };
 const remainingTimeInMs = computed(() => {
   if (!activationTime.value || !killSwitchActive.value) return 0;
@@ -1419,8 +1441,8 @@ const fetchTradingData = async () => {
   if (selectedBroker.value?.brokerName === 'Dhan') {
     response = await fetch(`http://localhost:3000/dhanSymbols?exchangeSymbol=${selectedExchange.value}&masterSymbol=${selectedMasterSymbol.value}`);
   } else if (selectedBroker.value?.brokerName === 'Flattrade') {
-    // response = await fetch(`http://localhost:3000/flattradeSymbols?exchangeSymbol=${selectedExchange.value}&masterSymbol=${selectedMasterSymbol.value}`);
-    response = await fetch(`http://localhost:3000/shoonyaSymbols?exchangeSymbol=${selectedExchange.value}&masterSymbol=${selectedMasterSymbol.value}`);
+    response = await fetch(`http://localhost:3000/flattradeSymbols?exchangeSymbol=${selectedExchange.value}&masterSymbol=${selectedMasterSymbol.value}`);
+    // response = await fetch(`http://localhost:3000/shoonyaSymbols?exchangeSymbol=${selectedExchange.value}&masterSymbol=${selectedMasterSymbol.value}`);
     // console.log('Flattrade Symbols:', response);
   } else if (selectedBroker.value?.brokerName === 'Shoonya') {
     response = await fetch(`http://localhost:3000/shoonyaSymbols?exchangeSymbol=${selectedExchange.value}&masterSymbol=${selectedMasterSymbol.value}`);
@@ -1706,31 +1728,28 @@ const fetchDhanOrdersTradesBook = async () => {
       }
     });
     dhanOrders.value = response.data; // Set the orders array
-    console.log('Dhan Order Book:', response.data);
+   // console.log('Dhan Order Book:', response.data);
   } catch (error) {
     console.error('Error fetching orders:', error);
-    toastMessage.value = 'Error fetching orders';
-    showToast.value = true;
+    showToastMessage('Error fetching orders');
   }
 };
-const flatOrderBook = ref([]);
+
 const flatTradeBook = ref([]);
 const token = ref('');
-
+const flatOrderBook = ref([]);
 const fetchFlattradeOrdersTradesBook = async () => {
   let jKey = localStorage.getItem('FLATTRADE_API_TOKEN') || token.value;
 
   if (!selectedBroker.value || selectedBroker.value?.brokerName !== 'Flattrade') {
-    toastMessage.value = 'Flattrade broker is not selected.';
-    showToast.value = true;
+    showToastMessage('Flattrade broker is not selected.');
     return;
   }
 
   const clientId = selectedBroker.value.clientId;
 
   if (!jKey || !clientId) {
-    toastMessage.value = 'Token or Client ID is missing. Please generate a token first.';
-    showToast.value = true;
+    showToastMessage('Token or Client ID is missing. Please generate a token first.');
     return;
   }
 
@@ -1744,11 +1763,10 @@ const fetchFlattradeOrdersTradesBook = async () => {
 
     flatOrderBook.value = response.data.orderBook;
     flatTradeBook.value = response.data.tradeBook;
-    console.log('Flattrade Order Book:', response.data.orderBook);
-    console.log('Flattrade Trade Book:', response.data.tradeBook);
+    // console.log('Flattrade Order Book:', response.data.orderBook);
+    // console.log('Flattrade Trade Book:', response.data.tradeBook);
   } catch (error) {
-    toastMessage.value = 'Error fetching trades: ' + error.message;
-    showToast.value = true;
+    showToastMessage('Error fetching trades: ' + error.message);
     console.error('Error fetching trades:', error);
   }
 };
@@ -1759,16 +1777,14 @@ const fetchShoonyaOrdersTradesBook = async () => {
   let jKey = localStorage.getItem('SHOONYA_API_TOKEN') || token.value;
 
   if (!selectedBroker.value || selectedBroker.value?.brokerName !== 'Shoonya') {
-    toastMessage.value = 'Shoonya broker is not selected.';
-    showToast.value = true;
+    showToastMessage('Shoonya broker is not selected.');
     return;
   }
 
   const clientId = selectedBroker.value.clientId;
 
   if (!jKey || !clientId) {
-    toastMessage.value = 'Token or Client ID is missing. Please generate a token first.';
-    showToast.value = true;
+    showToastMessage('Token or Client ID is missing. Please generate a token first.');
     return;
   }
 
@@ -1782,11 +1798,10 @@ const fetchShoonyaOrdersTradesBook = async () => {
 
     shoonyaOrderBook.value = response.data.orderBook;
     shoonyaTradeBook.value = response.data.tradeBook;
-    console.log('Shoonya Order Book:', response.data.orderBook);
-    console.log('Shoonya Trade Book:', response.data.tradeBook);
+    // console.log('Shoonya Order Book:', response.data.orderBook);
+    // console.log('Shoonya Trade Book:', response.data.tradeBook);
   } catch (error) {
-    toastMessage.value = 'Error fetching trades: ' + error.message;
-    showToast.value = true;
+    showToastMessage('Error fetching trades: ' + error.message);
     console.error('Error fetching trades:', error);
   }
 };
@@ -1863,8 +1878,7 @@ const dhanPositionBook = ref([]);
 const fetchDhanPositions = async () => {
   const dhanDetails = JSON.parse(localStorage.getItem('broker_Dhan') || '{}');
   if (!dhanDetails.apiToken) {
-    toastMessage.value = 'Dhan API Token is missing. Please generate a token first.';
-    showToast.value = true;
+    showToastMessage('Dhan API Token is missing. Please generate a token first.');
     return;
   }
   try {
@@ -1874,11 +1888,10 @@ const fetchDhanPositions = async () => {
       }
     });
     dhanPositionBook.value = response.data;
-    console.log('Dhan Position Book:', dhanPositionBook.value);
+    // console.log('Dhan Position Book:', dhanPositionBook.value);
   } catch (error) {
     console.error('Error fetching dhanPositionBook:', error);
-    toastMessage.value = 'Failed to fetch dhanPositionBook';
-    showToast.value = true;
+    showToastMessage('Failed to fetch dhanPositionBook');
   }
 };
 
@@ -1887,14 +1900,12 @@ const fetchFlattradePositions = async () => {
   let jKey = localStorage.getItem('FLATTRADE_API_TOKEN') || token.value;
 
   if (!jKey) {
-    toastMessage.value = 'Token is missing. Please generate a token first.';
-    showToast.value = true;
+    showToastMessage('Token is missing. Please generate a token first.');
     return;
   }
 
   if (!selectedBroker.value || selectedBroker.value?.brokerName !== 'Flattrade') {
-    toastMessage.value = 'Flattrade broker is not selected.';
-    showToast.value = true;
+    showToastMessage('Flattrade broker is not selected.');
     return;
   }
 
@@ -1934,14 +1945,12 @@ const fetchShoonyaPositions = async () => {
   let jKey = localStorage.getItem('SHOONYA_API_TOKEN') || token.value;
 
   if (!jKey) {
-    toastMessage.value = 'Token is missing. Please generate a token first.';
-    showToast.value = true;
+    showToastMessage('Token is missing. Please generate a token first.');
     return;
   }
 
   if (!selectedBroker.value || selectedBroker.value?.brokerName !== 'Shoonya') {
-    toastMessage.value = 'Shoonya broker is not selected.';
-    showToast.value = true;
+    showToastMessage('Shoonya broker is not selected.');
     return;
   }
 
@@ -1958,13 +1967,13 @@ const fetchShoonyaPositions = async () => {
 
     if (Array.isArray(positionBookRes.data) && positionBookRes.data.every(item => item.stat === 'Ok')) {
       shoonyaPositionBook.value = positionBookRes.data;
-      console.log('Shoonya Position Book:', positionBookRes.data);
+      // console.log('Shoonya Position Book:', positionBookRes.data);
       updatePositionSecurityIds();
       subscribeToPositionLTPs();
       subscribeToOptions();
     } else if (positionBookRes.data.emsg === 'no data' || positionBookRes.data.emsg.includes('no data')) {
       shoonyaPositionBook.value = [];
-      console.log('No positions in Shoonya Position Book');
+      // console.log('No positions in Shoonya Position Book');
     } else {
       const errorMsg = positionBookRes.data.emsg || 'Unknown error';
       console.error('Error fetching position book:', errorMsg);
@@ -2206,35 +2215,52 @@ const modifyingOrders = reactive({});
 const modifiedOrderData = reactive({});
 
 const isOrderModified = (orderId) => {
-  const originalOrder = selectedBroker.value?.brokerName === 'Dhan' 
+  const original = selectedBroker.value?.brokerName === 'Dhan'
     ? dhanOrders.value.find(order => order.orderId === orderId)
-    : combinedOrdersAndTrades.value.find(item => item.order.norenordno === orderId)?.order;
-
-  if (!originalOrder || !modifiedOrderData[orderId]) return false;
-
+    : (activeFetchFunction.value === 'fetchFlattradeOrdersTradesBook' ? flatOrderBook.value : shoonyaOrderBook.value).find(order => order.norenordno === orderId);
   const modified = modifiedOrderData[orderId];
 
-  return (
-    modified.orderType !== (originalOrder.orderType || originalOrder.prctyp) ||
-    modified.quantity !== Number(originalOrder.quantity || originalOrder.qty) ||
-    modified.price !== Number(originalOrder.price || originalOrder.prc) ||
-    modified.triggerPrice !== Number(originalOrder.triggerPrice || originalOrder.trgprc || 0)
-  );
+  if (!original || !modified) return false;
+
+  const isDhan = selectedBroker.value?.brokerName === 'Dhan';
+
+  const orderTypeChanged = (isDhan ? original.orderType : original.prctyp) !== modified.modifiedOrderType;
+  const quantityChanged = Number(isDhan ? original.quantity : original.qty) !== Number(modified.modifiedQuantity);
+  const priceChanged = Number(isDhan ? original.price : original.prc) !== Number(modified.modifiedPrice);
+  
+  let triggerPriceChanged = false;
+  if (isDhan && original.orderType === 'STOP_LOSS') {
+    triggerPriceChanged = Number(original.triggerPrice || 0) !== Number(modified.modifiedTriggerPrice || 0);
+  } else if (!isDhan && original.prctyp === 'SL-LMT') {
+    triggerPriceChanged = Number(original.trgprc || 0) !== Number(modified.modifiedTriggerPrice || 0);
+  }
+
+  return orderTypeChanged || quantityChanged || priceChanged || triggerPriceChanged;
 };
 
 const setModifyOrder = (orderId) => {
-  const order = selectedBroker.value?.brokerName === 'Dhan' 
-    ? dhanOrders.value.find(order => order.orderId === orderId)
-    : combinedOrdersAndTrades.value.find(item => item.order.norenordno === orderId)?.order;
+  let order;
+  if (selectedBroker.value?.brokerName === 'Dhan') {
+    order = dhanOrders.value.find(o => o.orderId === orderId);
+  } else if (selectedBroker.value?.brokerName === 'Flattrade') {
+    order = flatOrderBook.value.find(o => o.norenordno === orderId);
+  } else if (selectedBroker.value?.brokerName === 'Shoonya') {
+    order = shoonyaOrderBook.value.find(o => o.norenordno === orderId);
+  }
 
   if (order) {
-    modifyingOrders[orderId] = true;
     modifiedOrderData[orderId] = {
-      orderType: order.orderType || order.prctyp,
-      quantity: Number(order.quantity || order.qty),
-      price: Number(order.price || order.prc || 0),
-      triggerPrice: Number(order.triggerPrice || order.trgprc || 0)
+      modifiedOrderType: selectedBroker.value?.brokerName === 'Dhan' ? order.orderType : order.prctyp,
+      modifiedQuantity: selectedBroker.value?.brokerName === 'Dhan' ? order.quantity : order.qty,
+      modifiedPrice: selectedBroker.value?.brokerName === 'Dhan' ? order.price : order.prc,
+      modifiedTriggerPrice: selectedBroker.value?.brokerName === 'Dhan' ? order.triggerPrice : order.trgprc,
+      exch: order.exch,
+      tsym: selectedBroker.value?.brokerName === 'Dhan' ? order.tradingSymbol : order.tsym
     };
+    modifyingOrders[orderId] = true;
+    // console.log(`Set modify order for ${orderId}:`, modifiedOrderData[orderId]);
+  } else {
+    console.error(`Order not found for ID: ${orderId}`);
   }
 };
 
@@ -2243,49 +2269,64 @@ const cancelModifyOrder = (orderId) => {
   delete modifiedOrderData[orderId];
 };
 const isInputValid = (orderId) => {
-  if (!modifiedOrderData[orderId]) return false;
-
   const modified = modifiedOrderData[orderId];
-  const isValidQuantity = Number.isInteger(modified.quantity) && modified.quantity > 0;
-  const isValidPrice = modified.orderType === 'MARKET' || modified.orderType === 'MKT' || 
-    (modified.price > 0 && !isNaN(modified.price));
-  const isValidTriggerPrice = modified.orderType !== 'STOP_LOSS' && modified.orderType !== 'SL-LMT' || 
-    (modified.triggerPrice > 0 && !isNaN(modified.triggerPrice));
+  const isValidQuantity = Number.isInteger(modified.modifiedQuantity) && modified.modifiedQuantity > 0;
+  const isValidPrice = modified.modifiedOrderType === 'MARKET' || modified.modifiedOrderType === 'MKT' || 
+    (modified.modifiedPrice > 0 && !isNaN(modified.modifiedPrice));
+  const isValidTriggerPrice = modified.modifiedOrderType !== 'STOP_LOSS' && modified.modifiedOrderType !== 'SL-LMT' || 
+    (modified.modifiedTriggerPrice > 0 && !isNaN(modified.modifiedTriggerPrice));
 
   return isValidQuantity && isValidPrice && isValidTriggerPrice;
 };
+
 const validateInput = (order, field) => {
   const orderId = order.orderId || order.norenordno;
   const value = modifiedOrderData[orderId][field];
 
-  if (field === 'quantity' || field === 'qty') {
-    modifiedOrderData[orderId][field] = Math.max(1, Math.floor(value));
-  } else if (field === 'price' || field === 'prc' || field === 'triggerPrice' || field === 'trgprc') {
-    modifiedOrderData[orderId][field] = Math.max(0, parseFloat(value).toFixed(2));
+  if (field === 'modifiedQuantity') {
+    modifiedOrderData[orderId][field] = Math.max(1, Math.floor(Number(value)));
+  } else if (field === 'modifiedPrice' || field === 'modifiedTriggerPrice') {
+    modifiedOrderData[orderId][field] = Math.max(0, Number(parseFloat(value).toFixed(2)));
   }
+  // console.log(`Updated ${field} for order ${orderId}:`, modifiedOrderData[orderId][field]);
 };
 const handleOrderTypeChange = (order) => {
   const orderId = order.orderId || order.norenordno;
-  if (modifiedOrderData[orderId].orderType === 'MARKET' || modifiedOrderData[orderId].orderType === 'MKT') {
-    modifiedOrderData[orderId].price = 0;
-    modifiedOrderData[orderId].triggerPrice = 0;
-  } else if (modifiedOrderData[orderId].orderType === 'LIMIT' || modifiedOrderData[orderId].orderType === 'LMT') {
-    modifiedOrderData[orderId].triggerPrice = 0;
-  } else if (modifiedOrderData[orderId].orderType === 'STOP_LOSS' || modifiedOrderData[orderId].orderType === 'SL-LMT') {
-    if (modifiedOrderData[orderId].triggerPrice === 0) {
-      modifiedOrderData[orderId].triggerPrice = order.triggerPrice || order.trgprc || 0;
+  const isDhan = selectedBroker.value?.brokerName === 'Dhan';
+
+  if (isDhan) {
+    if (modifiedOrderData[orderId].modifiedOrderType === 'MARKET') {
+      modifiedOrderData[orderId].modifiedPrice = 0;
+      modifiedOrderData[orderId].modifiedTriggerPrice = 0;
+    } else if (modifiedOrderData[orderId].modifiedOrderType === 'LIMIT') {
+      modifiedOrderData[orderId].modifiedTriggerPrice = 0;
+    } else if (modifiedOrderData[orderId].modifiedOrderType === 'STOP_LOSS') {
+      if (modifiedOrderData[orderId].modifiedTriggerPrice === 0) {
+        modifiedOrderData[orderId].modifiedTriggerPrice = order.triggerPrice || 0;
+      }
+    }
+  } else {
+    if (modifiedOrderData[orderId].modifiedOrderType === 'MKT') {
+      modifiedOrderData[orderId].modifiedPrice = 0;
+      modifiedOrderData[orderId].modifiedTriggerPrice = 0;
+    } else if (modifiedOrderData[orderId].modifiedOrderType === 'LMT') {
+      modifiedOrderData[orderId].modifiedTriggerPrice = 0;
+    } else if (modifiedOrderData[orderId].modifiedOrderType === 'SL-LMT' || modifiedOrderData[orderId].modifiedOrderType === 'SL-MKT') {
+      if (modifiedOrderData[orderId].modifiedTriggerPrice === 0) {
+        modifiedOrderData[orderId].modifiedTriggerPrice = order.trgprc || 0;
+      }
     }
   }
 };
 const handleTriggerPriceChange = (order) => {
   const orderId = order.orderId || order.norenordno;
-  const triggerPrice = parseFloat(modifiedOrderData[orderId].triggerPrice);
+  const triggerPrice = parseFloat(modifiedOrderData[orderId].modifiedTriggerPrice);
   if (!isNaN(triggerPrice)) {
     const adjustment = Math.ceil(triggerPrice * 0.01);
     if (order.transactionType === 'BUY' || order.trantype === 'B') {
-      modifiedOrderData[orderId].price = roundToNearestTick(triggerPrice + adjustment).toFixed(2);
+      modifiedOrderData[orderId].modifiedPrice = roundToNearestTick(triggerPrice + adjustment, 0.05).toFixed(2);
     } else if (order.transactionType === 'SELL' || order.trantype === 'S') {
-      modifiedOrderData[orderId].price = roundToNearestTick(triggerPrice - adjustment).toFixed(2);
+      modifiedOrderData[orderId].modifiedPrice = roundToNearestTick(triggerPrice - adjustment, 0.05).toFixed(2);
     }
   }
 };
@@ -2440,7 +2481,7 @@ const adjustStoplossPrice = (tsym, adjustment) => {
   const currentLTP = Number(positionLTPs.value[tsym] || 0);
   positionStoplosses.value[tsym] = Math.abs(currentLTP - positionStoplossesPrice.value[tsym]);
 
-  console.log(`Adjusted stoploss for ${tsym}: Price=${positionStoplossesPrice.value[tsym]}, Points=${positionStoplosses.value[tsym]}`);
+  // console.log(`Adjusted stoploss for ${tsym}: Price=${positionStoplossesPrice.value[tsym]}, Points=${positionStoplosses.value[tsym]}`);
 
   localStorage.setItem('positionStoplossesPrice', JSON.stringify(positionStoplossesPrice.value));
   localStorage.setItem('positionStoplosses', JSON.stringify(positionStoplosses.value));
@@ -2464,7 +2505,7 @@ const adjustTargetPrice = (tsym, adjustment) => {
   const currentLTP = Number(positionLTPs.value[tsym] || 0);
   positionTargets.value[tsym] = Math.abs(currentLTP - positionTargetsPrice.value[tsym]);
 
-  console.log(`Adjusted target for ${tsym}: Price=${positionTargetsPrice.value[tsym]}, Points=${positionTargets.value[tsym]}`);
+  // console.log(`Adjusted target for ${tsym}: Price=${positionTargetsPrice.value[tsym]}, Points=${positionTargets.value[tsym]}`);
 
   localStorage.setItem('positionTargetsPrice', JSON.stringify(positionTargetsPrice.value));
   localStorage.setItem('positionTargets', JSON.stringify(positionTargets.value));
@@ -2531,9 +2572,8 @@ const placeOrder = async (transactionType, drvOptionType) => {
       });
     }
 
-    console.log("Order placed successfully:", response.data);
-    toastMessage.value = 'Order placed successfully';
-    showToast.value = true;
+    // console.log("Order placed successfully:", response.data);
+    showToastMessage('Order placed successfully');
     // Add a delay before fetching updated data
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -2553,11 +2593,10 @@ const placeOrder = async (transactionType, drvOptionType) => {
     console.error("Error placing order:", error); // Log the full error
     if (error.response && error.response.data && error.response.data.message) {
       const firstThreeWords = error.response.data.message.split(' ').slice(0, 3).join(' ');
-      toastMessage.value = firstThreeWords;
+      showToastMessage(firstThreeWords);
     } else {
-      toastMessage.value = 'Failed to place order unfortunately';
+      showToastMessage('Failed to place order unfortunately');
     }
-    showToast.value = true;
   }
 };
 
@@ -2599,7 +2638,7 @@ const placeOrderForPosition = async (transactionType, optionType, position) => {
     const quantity = Math.abs(Number(position.netQty || position.netqty));
 
     if (quantity === 0) {
-      console.log('Quantity is zero, no order will be placed.');
+      // console.log('Quantity is zero, no order will be placed.');
       return;
     }
 
@@ -2660,9 +2699,8 @@ const placeOrderForPosition = async (transactionType, optionType, position) => {
       });
     }
 
-    console.log(`Order placed successfully for ${getSymbol(position)}`, response.data);
-    toastMessage.value = `Order placed successfully for ${getSymbol(position)}`;
-    showToast.value = true;
+    // console.log(`Order placed successfully for ${getSymbol(position)}`, response.data);
+    showToastMessage(`Order placed successfully for ${getSymbol(position)}`);
 
     // Remove stoploss and target for this position
     const tsym = getSymbol(position);
@@ -2680,81 +2718,102 @@ const placeOrderForPosition = async (transactionType, optionType, position) => {
 
   } catch (error) {
     console.error('Failed to place order for position:', error);
-    toastMessage.value = 'Failed to place order for SL/Target';
-    showToast.value = true;
+    showToastMessage('Failed to place order for SL/Target');
   }
 };
 const modifyOpenOrder = async (orderId) => {
   try {
-    const order = selectedBroker.value?.brokerName === 'Dhan' 
-      ? dhanOrders.value.find(o => o.orderId === orderId)
-      : combinedOrdersAndTrades.value.find(item => item.order.norenordno === orderId)?.order;
-
-    if (!order) {
-      console.error(`Order with ID ${orderId} not found`);
-      return;
-    }
-
     const modifiedData = modifiedOrderData[orderId];
     if (!modifiedData) {
-      console.error(`No modified data found for order ${orderId}`);
-      return;
+      throw new Error("No modified data found for this order");
     }
 
-    let response;
+    let options;
+
     if (selectedBroker.value?.brokerName === 'Dhan') {
       const dhanDetails = JSON.parse(localStorage.getItem('broker_Dhan') || '{}');
-      console.log(`Sending request to modify Dhan order ${orderId}`);
-      const requestData = {
-        dhanClientId: selectedBroker.value.clientId,
-        orderId: orderId,
-        orderType: modifiedData.orderType,
-        quantity: modifiedData.quantity,
-        price: modifiedData.price,
-        triggerPrice: modifiedData.triggerPrice,
-        validity: "DAY"
-      };
-      console.log("Dhan modify order request data:", JSON.stringify(requestData, null, 2));
-      response = await axios.put('http://localhost:3000/dhanModifyOrder', requestData, {
+      
+      options = {
+        method: 'PUT',
+        url: `http://localhost:3000/dhanModifyOrder/${orderId}`,
         headers: {
-          'order-id': orderId,
-          'dhan_api_token': dhanDetails.apiToken
+          'access-token': dhanDetails.apiToken,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        data: {
+          dhanClientId: selectedBroker.value.clientId,
+          orderId: orderId,
+          orderType: modifiedData.modifiedOrderType,
+          quantity: parseInt(modifiedData.modifiedQuantity),
+          price: parseFloat(modifiedData.modifiedPrice),
+          triggerPrice: parseFloat(modifiedData.modifiedTriggerPrice || 0),
+          validity: "DAY"
         }
-      });
-      console.log("Dhan modify order response:", JSON.stringify(response.data, null, 2));
-      await fetchDhanOrdersTradesBook();
+      };
     } else if (selectedBroker.value?.brokerName === 'Flattrade' || selectedBroker.value?.brokerName === 'Shoonya') {
       const jKey = localStorage.getItem(`${selectedBroker.value.brokerName.toUpperCase()}_API_TOKEN`);
-      const endpoint = selectedBroker.value?.brokerName === 'Flattrade' ? 'flattradeModifyOrder' : 'shoonyaModifyOrder';
-      console.log(`Sending request to modify ${selectedBroker.value?.brokerName} order ${orderId}`);
-      response = await axios.post(`http://localhost:3000/${endpoint}`, {
-        norenordno: orderId,
-        uid: selectedBroker.value.clientId,
-        exch: order.exch,
-        prc: modifiedData.price,
-        prctyp: modifiedData.orderType,
-        qty: modifiedData.quantity,
-        tsym: order.tsym,
-        ret: "DAY",
-        trgprc: modifiedData.triggerPrice
-      }, {
-        headers: {
-          [`${selectedBroker.value.brokerName.toLowerCase()}_api_token`]: jKey
+      options = {
+        method: 'POST',
+        url: `http://localhost:3000/${selectedBroker.value?.brokerName === 'Flattrade' ? 'flattradeModifyOrder' : 'shoonyaModifyOrder'}`,
+        data: {
+          norenordno: orderId,
+          uid: selectedBroker.value.clientId,
+          exch: modifiedData.exch,
+          tsym: modifiedData.tsym,
+          qty: modifiedData.modifiedQuantity.toString(),
+          prc: modifiedData.modifiedPrice.toString(),
+          prctyp: modifiedData.modifiedOrderType,
+          ret: "DAY"
+        },
+        params: {
+          [`${selectedBroker.value.brokerName.toUpperCase()}_API_TOKEN`]: jKey
         }
-      });
-      await (selectedBroker.value?.brokerName === 'Flattrade' ? fetchFlattradeOrdersTradesBook() : fetchShoonyaOrdersTradesBook());
+      };
+
+      // Only include trigger price for stop loss orders
+      if (modifiedData.modifiedOrderType === 'SL-LMT' || modifiedData.modifiedOrderType === 'SL-MKT') {
+        options.data.trgprc = (modifiedData.modifiedTriggerPrice || '').toString();
+      }
+
+      // If it's a market order, set price to 0
+      if (modifiedData.modifiedOrderType === 'MKT') {
+        options.data.prc = '';
+      }
     } else {
       throw new Error("Unsupported broker");
     }
-    console.log(`Order ${orderId} modified successfully.`);
+
+    // console.log(`Sending request to modify ${selectedBroker.value?.brokerName} order ${orderId}:`, options);
+    const response = await axios(options);
+    console.log(`${selectedBroker.value?.brokerName} modify order response:`, response.data);
+
+    // Refresh the order book after modifying an order
+    if (selectedBroker.value?.brokerName === 'Dhan') {
+      await fetchDhanOrdersTradesBook();
+    } else if (selectedBroker.value?.brokerName === 'Flattrade') {
+      await fetchFlattradeOrdersTradesBook();
+    } else if (selectedBroker.value?.brokerName === 'Shoonya') {
+      await fetchShoonyaOrdersTradesBook();
+    }
+
     await updateFundLimits();
     delete modifiedOrderData[orderId];
     modifyingOrders[orderId] = false;
+
+    showToastMessage('Order modified successfully');
   } catch (error) {
-    console.error(`Failed to modify order ${orderId}:`, error);
-    toastMessage.value = 'Failed to modify order';
-    showToast.value = true;
-    throw error;
+    console.error(`Failed to modify ${selectedBroker.value?.brokerName} order ${orderId}:`, error);
+    if (error.response) {
+      console.error('Error response:', error.response.data);
+      console.error('Error status:', error.response.status);
+      console.error('Error headers:', error.response.headers);
+    } else if (error.request) {
+      console.error('Error request:', error.request);
+    } else {
+      console.error('Error message:', error.message);
+    }
+    showToastMessage(`Failed to modify order: ${error.message}`);
   }
 };
 // Close all positions for Dhan, Flattrade, or Shoonya
@@ -2804,15 +2863,13 @@ const closeAllPositions = async () => {
     await updateFundLimits()
 
     if (positionsClosed) {
-      toastMessage.value = `All ${selectedBroker.value?.brokerName} positions closed successfully`;
+      showToastMessage(`All ${selectedBroker.value?.brokerName} positions closed successfully`);
     } else {
-      toastMessage.value = `No positions to close for ${selectedBroker.value?.brokerName}`;
+      showToastMessage(`No positions to close for ${selectedBroker.value?.brokerName}`);
     }
-    showToast.value = true;
   } catch (error) {
     console.error('Error closing positions:', error);
-    toastMessage.value = 'Failed to close all positions';
-    showToast.value = true;
+    showToastMessage('Failed to close all positions');
   }
 };
 
@@ -2871,34 +2928,32 @@ const closeSelectedPositions = async () => {
     await updateFundLimits();
 
     if (positionsClosed) {
-      toastMessage.value = `Selected positions closed successfully`;
+      showToastMessage(`Selected positions closed successfully`);
     } else {
-      toastMessage.value = `No positions to close`;
+      showToastMessage(`No positions to close`);
     }
-    showToast.value = true;
   } catch (error) {
     console.error('Error closing selected positions:', error);
-    toastMessage.value = 'Failed to close selected positions';
-    showToast.value = true;
+    showToastMessage('Failed to close selected positions');
   }
 };
 const cancelOrder = async (order) => {
   const orderId = selectedBroker.value?.brokerName === 'Dhan' ? order.orderId : order.norenordno;
   const orderStatus = selectedBroker.value?.brokerName === 'Dhan' ? order.orderStatus : order.status;
 
-  console.log(`Attempting to cancel order ${orderId} with status ${orderStatus}`);
-  console.log(`Broker: ${selectedBroker.value?.brokerName}`);
+  // console.log(`Attempting to cancel order ${orderId} with status ${orderStatus}`);
+  // console.log(`Broker: ${selectedBroker.value?.brokerName}`);
 
   if ((selectedBroker.value?.brokerName === 'Dhan' && orderStatus !== 'PENDING') ||
     (selectedBroker.value?.brokerName === 'Flattrade' && orderStatus !== 'OPEN')) {
-    console.log(`Order ${orderId} is not in a cancellable state and cannot be canceled.`);
+    // console.log(`Order ${orderId} is not in a cancellable state and cannot be canceled.`);
     return;
   }
 
   try {
     if (selectedBroker.value?.brokerName === 'Dhan') {
       const dhanDetails = JSON.parse(localStorage.getItem('broker_Dhan') || '{}');
-      console.log(`Sending request to cancel Dhan order ${orderId}`);
+      // console.log(`Sending request to cancel Dhan order ${orderId}`);
       await axios.delete('http://localhost:3000/dhanCancelOrder', {
         data: { orderId },
         params: {
@@ -2909,7 +2964,7 @@ const cancelOrder = async (order) => {
     else if (selectedBroker.value?.brokerName === 'Flattrade') {
       const jKey = localStorage.getItem('FLATTRADE_API_TOKEN') || token.value;
       const clientId = selectedBroker.value.clientId;
-      console.log(`Sending request to cancel Flattrade order ${orderId}`);
+      // console.log(`Sending request to cancel Flattrade order ${orderId}`);
       await axios.post('http://localhost:3000/flattradeCancelOrder', {
         norenordno: orderId,
         uid: clientId
@@ -2932,19 +2987,18 @@ const cancelOrder = async (order) => {
         }
       });
     }
-    console.log(`Order ${orderId} canceled successfully.`);
+    // console.log(`Order ${orderId} canceled successfully.`);
     // Update fund limits
     await updateFundLimits();
   } catch (error) {
     console.error(`Failed to cancel order ${orderId}:`, error);
-    toastMessage.value = 'Failed to cancel order';
-    showToast.value = true;
+    showToastMessage('Failed to cancel order');
     throw error; // Rethrow to handle in cancelPendingOrders
   }
 };
 
 const cancelPendingOrders = async () => {
-  console.log(`Canceling pending orders for broker: ${selectedBroker.value?.brokerName}`);
+  // console.log(`Canceling pending orders for broker: ${selectedBroker.value?.brokerName}`);
 
   // Fetch orders based on the selected broker
   if (selectedBroker.value?.brokerName === 'Dhan') {
@@ -2967,14 +3021,13 @@ const cancelPendingOrders = async () => {
     return;
   }
 
-  console.log(`Pending orders:`, pendingOrders);
+  // console.log(`Pending orders:`, pendingOrders);
 
   const cancelPromises = pendingOrders.map(order => cancelOrder(order));
 
   try {
     await Promise.all(cancelPromises);
-    toastMessage.value = 'Pending orders canceled successfully';
-    showToast.value = true;
+    showToastMessage('Pending orders canceled successfully');
 
     // Refresh the orders list based on the selected broker
     if (selectedBroker.value?.brokerName === 'Dhan') {
@@ -2986,8 +3039,7 @@ const cancelPendingOrders = async () => {
     }
   } catch (error) {
     console.error('Failed to cancel orders:', error);
-    toastMessage.value = 'Failed to cancel some orders';
-    showToast.value = true;
+    showToastMessage('Failed to cancel some orders');
   }
 };
 const formatPrice = (price) => {
@@ -3003,11 +3055,11 @@ const getSymbol = (position) => {
 
 // Cancel Open Order from Trades Tab...  
 const cancelOpenOrder = async (orderId) => {
-  console.log(`Canceling open order with ID: ${orderId}`);
+  // console.log(`Canceling open order with ID: ${orderId}`);
   try {
     if (selectedBroker.value?.brokerName === 'Dhan') {
       const dhanDetails = JSON.parse(localStorage.getItem('broker_Dhan') || '{}');
-      console.log(`Sending request to cancel Dhan order ${orderId}`);
+      // console.log(`Sending request to cancel Dhan order ${orderId}`);
       await axios.delete('http://localhost:3000/dhanCancelOrder', {
         data: { orderId },
         params: {
@@ -3019,7 +3071,7 @@ const cancelOpenOrder = async (orderId) => {
     else if (selectedBroker.value?.brokerName === 'Flattrade') {
       const jKey = localStorage.getItem('FLATTRADE_API_TOKEN') || token.value;
       const clientId = selectedBroker.value.clientId;
-      console.log(`Sending request to cancel Flattrade order ${orderId}`);
+      // console.log(`Sending request to cancel Flattrade order ${orderId}`);
       await axios.post('http://localhost:3000/flattradeCancelOrder', {
         norenordno: orderId,
         uid: clientId
@@ -3033,7 +3085,7 @@ const cancelOpenOrder = async (orderId) => {
     else if (selectedBroker.value?.brokerName === 'Shoonya') {
       const jKey = localStorage.getItem('SHOONYA_API_TOKEN') || token.value;
       const clientId = selectedBroker.value.clientId;
-      console.log(`Sending request to cancel Shoonya order ${orderId}`);
+      // console.log(`Sending request to cancel Shoonya order ${orderId}`);
       await axios.post('http://localhost:3000/shoonyaCancelOrder', {
         norenordno: orderId,
         uid: clientId
@@ -3044,12 +3096,11 @@ const cancelOpenOrder = async (orderId) => {
       });
       await fetchShoonyaOrdersTradesBook();
     }
-    console.log(`Order ${orderId} canceled successfully.`);
+    // console.log(`Order ${orderId} canceled successfully.`);
     await updateFundLimits();
   } catch (error) {
     console.error(`Failed to cancel order ${orderId}:`, error);
-    toastMessage.value = 'Failed to cancel order';
-    showToast.value = true;
+    showToastMessage('Failed to cancel order');
     throw error; 
   }
 };
@@ -3070,7 +3121,7 @@ const setStoplossAndTarget = (position) => {
 
     // Ensure stoploss price is not negative for long positions
     if (isLong && stoplossPrice <= 0) {
-      console.log(`Stoploss for ${tsym} would be negative or zero. Disabling stoploss.`);
+      // console.log(`Stoploss for ${tsym} would be negative or zero. Disabling stoploss.`);
       delete positionStoplossesPrice.value[tsym];
       tradeSettings.enableStoploss = false;
     } else {
@@ -3088,7 +3139,7 @@ const setStoplossAndTarget = (position) => {
     delete positionTargetsPrice.value[tsym];
   }
 
-  console.log(`Set SL/Target for ${tsym}: LTP=${currentLTP}, SL Price=${positionStoplossesPrice.value[tsym]}, Target Price=${positionTargetsPrice.value[tsym]}`);
+  // console.log(`Set SL/Target for ${tsym}: LTP=${currentLTP}, SL Price=${positionStoplossesPrice.value[tsym]}, Target Price=${positionTargetsPrice.value[tsym]}`);
 
   localStorage.setItem('positionStoplossesPrice', JSON.stringify(positionStoplossesPrice.value));
   localStorage.setItem('positionTargetsPrice', JSON.stringify(positionTargetsPrice.value));
@@ -3115,10 +3166,10 @@ const checkStoplossAndTarget = (position, currentLTP) => {
 
   const isLong = netQty > 0;
 
-  console.log(`Checking ${tsym}: LTP=${currentLTP}, SL Price=${stoplossPrice}, Target Price=${targetPrice}, IsLong=${isLong}`);
+  // console.log(`Checking ${tsym}: LTP=${currentLTP}, SL Price=${stoplossPrice}, Target Price=${targetPrice}, IsLong=${isLong}`);
 
   const executeOrder = (orderType, reason) => {
-    console.log(`${reason} for ${isLong ? 'long' : 'short'} position ${tsym}`);
+    // console.log(`${reason} for ${isLong ? 'long' : 'short'} position ${tsym}`);
     positionsInExecution.value[tsym] = true;
     placeOrderForPosition(orderType, tsym.includes('CE') || tsym.includes('C') ? 'C' : 'P', position)
       .finally(() => {
@@ -3374,16 +3425,14 @@ const cycleClockEmoji = () => {
 const setFlattradeCredentials = async () => {
   try {
     if (!selectedBroker.value || selectedBroker.value?.brokerName !== 'Flattrade') {
-      toastMessage.value = 'Realtime LTP data only available for Flattrade';
-      showToast.value = true;
+      showToastMessage('Realtime LTP data only available for Flattrade');
       return;
     }
 
     // Check if the broker status is 'Connected'
     if (brokerStatus.value !== 'Connected') {
       console.error('Flattrade broker is not connected');
-      toastMessage.value = 'Flattrade broker is not connected';
-      showToast.value = true;
+      showToastMessage('Flattrade broker is not connected');
       return;
     }
 
@@ -3392,16 +3441,14 @@ const setFlattradeCredentials = async () => {
 
     if (!clientId || !apiToken) {
       console.error('Flattrade client ID or API token is missing');
-      toastMessage.value = 'Flattrade credentials are missing';
-      showToast.value = true;
+      showToastMessage('Flattrade credentials are missing');
       return;
     }
 
     const symbolInfo = exchangeSymbols.value.symbolData[selectedMasterSymbol.value];
     if (!symbolInfo || !symbolInfo.other) {
       console.error('Invalid or missing symbol info for Flattrade');
-      toastMessage.value = 'Invalid symbol selected for Flattrade';
-      showToast.value = true;
+      showToastMessage('Invalid symbol selected for Flattrade');
       return;
     }
 
@@ -3415,29 +3462,25 @@ const setFlattradeCredentials = async () => {
       defaultCallSecurityId: defaultCallSecurityId.value,
       defaultPutSecurityId: defaultPutSecurityId.value
     });
-    console.log('Credentials and security IDs set successfully:', response.data);
-    toastMessage.value = 'Flattrade credentials set successfully';
-    showToast.value = true;
+    // console.log('Credentials and security IDs set successfully:', response.data);
+    showToastMessage('Flattrade credentials set successfully');
   } catch (error) {
     console.error('Error setting credentials and security IDs:', error);
-    toastMessage.value = 'Failed to set Flattrade credentials';
-    showToast.value = true;
+    showToastMessage('Failed to set Flattrade credentials');
   }
 };
 
 const setShoonyaCredentials = async () => {
   try {
     if (!selectedBroker.value || selectedBroker.value?.brokerName !== 'Shoonya') {
-      toastMessage.value = 'Realtime LTP data only available for Shoonya';
-      showToast.value = true;
+      showToastMessage('Realtime LTP data only available for Shoonya');
       return;
     }
 
     // Check if the broker status is 'Connected'
     if (brokerStatus.value !== 'Connected') {
       console.error('Shoonya broker is not connected');
-      toastMessage.value = 'Shoonya broker is not connected';
-      showToast.value = true;
+      showToastMessage('Shoonya broker is not connected');
       return;
     }
 
@@ -3446,16 +3489,14 @@ const setShoonyaCredentials = async () => {
 
     if (!clientId || !apiToken) {
       console.error('Shoonya client ID or API token is missing');
-      toastMessage.value = 'Shoonya credentials are missing';
-      showToast.value = true;
+      showToastMessage('Shoonya credentials are missing');
       return;
     }
 
     const symbolInfo = exchangeSymbols.value.symbolData[selectedMasterSymbol.value];
     if (!symbolInfo || !symbolInfo.other) {
       console.error('Invalid or missing symbol info for Shoonya');
-      toastMessage.value = 'Invalid symbol selected for Shoonya';
-      showToast.value = true;
+      showToastMessage('Invalid symbol selected for Shoonya');
       return;
     }
 
@@ -3469,13 +3510,11 @@ const setShoonyaCredentials = async () => {
       defaultCallSecurityId: defaultCallSecurityId.value,
       defaultPutSecurityId: defaultPutSecurityId.value
     });
-    console.log('Credentials and security IDs set successfully:', response.data);
-    toastMessage.value = 'Shoonya credentials set successfully';
-    showToast.value = true;
+    // console.log('Credentials and security IDs set successfully:', response.data);
+    showToastMessage('Shoonya credentials set successfully');
   } catch (error) {
     console.error('Error setting credentials and security IDs:', error);
-    toastMessage.value = 'Failed to set Shoonya credentials';
-    showToast.value = true;
+    showToastMessage('Failed to set Shoonya credentials');
   }
 };
 
@@ -3483,16 +3522,14 @@ const setShoonyaCredentials = async () => {
 const setDhanCredentials = async () => {
   try {
     if (!selectedBroker.value || selectedBroker.value?.brokerName !== 'Dhan') {
-      toastMessage.value = 'Realtime LTP data only available for Dhan';
-      showToast.value = true;
+      showToastMessage('Realtime LTP data only available for Dhan');
       return;
     }
 
     // Check if the broker status is 'Connected'
     if (brokerStatus.value !== 'Connected') {
       console.error('Dhan broker is not connected');
-      toastMessage.value = 'Dhan broker is not connected';
-      showToast.value = true;
+      showToastMessage('Dhan broker is not connected');
       return;
     }
 
@@ -3501,16 +3538,14 @@ const setDhanCredentials = async () => {
 
     if (!clientId || !apiToken) {
       console.error('Dhan client ID or API token is missing');
-      toastMessage.value = 'Dhan credentials are missing';
-      showToast.value = true;
+      showToastMessage('Dhan credentials are missing');
       return;
     }
 
     const symbolInfo = exchangeSymbols.value.symbolData[selectedMasterSymbol.value];
     if (!symbolInfo || !symbolInfo.dhan) {
       console.error('Invalid or missing symbol info for Dhan');
-      toastMessage.value = 'Invalid symbol selected for Dhan';
-      showToast.value = true;
+      showToastMessage('Invalid symbol selected for Dhan');
       return;
     }
 
@@ -3523,13 +3558,11 @@ const setDhanCredentials = async () => {
       dhanSecurityId
     });
 
-    console.log('Credentials and security IDs set successfully:', response.data);
-    toastMessage.value = 'Dhan credentials set successfully';
-    showToast.value = true;
+    // console.log('Credentials and security IDs set successfully:', response.data);
+    showToastMessage('Dhan credentials set successfully');
   } catch (error) {
     console.error('Error setting credentials and security IDs:', error);
-    toastMessage.value = 'Failed to set Dhan credentials';
-    showToast.value = true;
+    showToastMessage('Failed to set Dhan credentials');
   }
 };
 
@@ -3822,6 +3855,7 @@ onMounted(async () => {
     loadLots();
     updateSelectedQuantity();
     setDefaultExpiry();
+    showToastMessage('Welcome to the Steadfast!');
 
     window.addEventListener('keydown', handleHotKeys);
 
@@ -3848,6 +3882,7 @@ onMounted(async () => {
     positionCheckInterval = setInterval(continuouslyCheckPositions, 1000); // Check every second
   } catch (error) {
     console.error('Error during onMounted:', error);
+    showToastMessage('An error occurred while loading the Trade View.');
   }
 });
 
@@ -4037,14 +4072,14 @@ watch(positionLTPs, (newLTPs, oldLTPs) => {
   // console.log('positionLTPs updated:', newLTPs);
   Object.entries(newLTPs).forEach(([tsym, ltp]) => {
     if (ltp !== oldLTPs[tsym]) {
-      console.log(`LTP changed for ${tsym}: ${oldLTPs[tsym]} -> ${ltp}`);
+      // console.log(`LTP changed for ${tsym}: ${oldLTPs[tsym]} -> ${ltp}`);
       const position = [...flatTradePositionBook.value, ...shoonyaPositionBook.value, ...dhanPositionBook.value]
         .find(p => (p.tsym || p.tradingSymbol) === tsym);
       if (position) {
-        console.log(`Found position for ${tsym}:`, position);
+        // console.log(`Found position for ${tsym}:`, position);
         checkStoplossAndTarget(position, ltp);
       } else {
-        console.log(`No position found for ${tsym}`);
+        // console.log(`No position found for ${tsym}`);
       }
     }
   });
@@ -4062,7 +4097,7 @@ watch(() => [tradeSettings.enableStoploss, tradeSettings.stoplossValue, tradeSet
 // }, { deep: true });
 // Modify the existing watcher for tradeSettings
 watch(tradeSettings, (newSettings, oldSettings) => {
-  console.log('Trade settings changed:', newSettings, oldSettings);
+  // console.log('Trade settings changed:', newSettings, oldSettings);
   saveTradeSettings();
   const allPositions = [...flatTradePositionBook.value, ...shoonyaPositionBook.value, ...dhanPositionBook.value];
   allPositions.forEach(setStoplossAndTarget);
